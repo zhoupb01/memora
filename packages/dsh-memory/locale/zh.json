@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "长期记忆",
+    "description": "Memora 的 DSH 记忆适配器，与 pi 共用独立核心；用 Markdown 记住偏好和项目背景，支持全局与项目索引、冷存储和 /tidy 整理。"
+  }
+}

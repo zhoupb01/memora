@@ -1,95 +1,105 @@
-# pi-memory
+# Memora
 
-Long-term memory for the [pi coding agent](https://github.com/earendil-works/pi), modelled on Claude Code's auto memory. Memories are plain Markdown files. A short index goes into the system prompt on every run. The model decides what is worth saving and writes the files with pi's normal `write`, `edit`, and `bash` tools. No background model calls, no new tools, no database.
+**一套记忆核心，多个原生适配器。**
 
-The guide teaches the model to save little: "most conversations need no memory at all". It uses plain language so weaker models can follow it. It was tested with DeepSeek V4.1 Flash, with Chinese conversations.
+Memora 用 Markdown 保存值得长期记住的偏好和项目背景。短索引随请求进入上下文，正文按需读取，过期记忆进入冷存储。由模型使用宿主的普通文件工具维护记忆，不增加数据库、专用记忆工具或后台模型请求。
 
-## How it works
+pi 和 DeepSeek Harness 是平级适配器。记忆策略和提示词只在共享核心中维护。
 
-Memory has three layers:
+## 架构
 
-- **Index (`MEMORY.md`):** shown on every run, up to 200 lines per index.
-- **Memory files:** read only when needed.
-- **Cold storage (`archive/`):** not shown in the prompt. The model greps it when the user refers to the past, it meets an unknown name, or it is about to say it doesn't remember.
-
-Wrong memories are deleted. Outdated ones (a passed date, a finished project, a replaced approach) move to cold storage. The guide tells the model to archive passed deadlines and events automatically at the start of a conversation, and to tidy memory when you run `/tidy`.
-
-## Install
-
-For a stable version, install a pinned release:
-
-```bash
-pi install git:github.com/zhoupb01/pi-memory@v0.1.0
+```text
+memora/
+├── packages/
+│   ├── core/          # 记忆策略、提示词、索引、项目识别和上下文组装
+│   ├── pi-memory/     # pi 生命周期和目录适配
+│   └── dsh-memory/    # DSH 配置、提示词注册和命令适配
+├── scripts/          # 构建与发行
+└── test/             # 跨适配器与分发契约测试
 ```
 
-`pi update` leaves pinned releases in place. To upgrade, install another tag with `pi install git:github.com/zhoupb01/pi-memory@vX.Y.Z`; it replaces the old entry. Releases are listed in [CHANGELOG.md](CHANGELOG.md) and on the [GitHub releases page](https://github.com/zhoupb01/pi-memory/releases).
+| 模块 | 职责 |
+| --- | --- |
+| [Core](packages/core/README.md) | `buildMemoryPrompt()` 与 `readTidyTemplate()`；不依赖任何宿主 |
+| [pi-memory](packages/pi-memory/README.md) | 接入 `before_agent_start`，使用 pi 的工作目录与记忆根 |
+| [dsh-memory](packages/dsh-memory/README.md) | 接入 Cordis 提示词、会话目录与 `/tidy` 命令 |
 
-To follow `main`, install without a tag:
+核心统一处理：最近的 Git/worktree 项目根、全局与项目索引、每份索引 200 行上限、冷库计数、当地日期和完整提示词。文件缺失按空记忆处理，其他读取错误向宿主报告。
 
-```bash
-pi install git:github.com/zhoupb01/pi-memory
-```
+## 开始使用
 
-Update this version with `pi update --extensions`.
-
-Both forms add the memory extension and the `/tidy` command. Do not install both a local path and a git source of this package at once.
-
-## Where memory lives
-
-- `~/.pi/agent/memory/global/`: about the user and how to work.
-- `~/.pi/agent/memory/projects/<project path with / replaced by ->/`: about this project. The project is the nearest folder with `.git`, or the working folder if none exists.
-
-Each folder has its own `MEMORY.md`, memory files, and `archive/`. `PI_MEMORY_DIR` overrides the memory root (`~/.pi/agent/memory/`). The files are plain Markdown: read, edit, or delete them by hand any time.
-
-## Interactive use only
-
-Memory is active in TUI and RPC mode. It does nothing in print (`-p`) and JSON mode, where the "user" is usually a script or another agent sending a task.
-
-## Customizing
-
-All memory behaviour is in `GUIDE.md`. It is re-read on every run, so edits apply on the next message without `/reload`.
-
-## Testing
-
-The sample conversations are in Chinese. These are model-driven checks; review the replies and file changes. The driver needs [Bun](https://bun.sh).
-
-- `test/rpc-drive.ts` drives pi in RPC mode through fresh conversations and prints replies and tool calls.
-- `test/sessions.json` checks saving preferences and project details, recall, corrections, forgetting, and refusing to save a secret.
-- `test/seed-cold.sh` creates a test project and seeds duplicate preferences, dated memories, a missing script reference, and an archived payment provider. It deletes and recreates the target directory, so use a disposable path.
-- `test/sessions-cold.json` checks archiving passed dates at startup, `/tidy`, and recall from cold storage. The seed uses fixed November 2026 dates; which events have passed depends on the day you run it.
-
-From this package folder, run the basic conversations with an isolated memory root. The flags below disable installed extensions and prompt templates and load this working copy's extension and `/tidy` template, so an installed release does not affect the checks:
+开发环境需要 Node.js 22.18 或更新版本：
 
 ```bash
-trial=$(mktemp -d)
-mkdir -p "$trial/project/.git"
-PI_MEMORY_DIR="$trial/mem" bun test/rpc-drive.ts \
-  "$trial/project" '<provider/model>' test/sessions.json -ne -np -e "$PWD" --prompt-template "$PWD/tidy.md"
+git clone https://github.com/zhoupb01/memora.git
+cd memora
+npm ci --ignore-scripts
+npm run build
 ```
 
-For the cold storage checks, seed a fresh disposable directory and run `test/sessions-cold.json`:
+构建把同一份核心和提示词放入两个插件的 `lib/core/`。这些是生成文件，插件运行时无需访问仓库外部的核心包。
+
+**pi：**
 
 ```bash
-cold_trial=$(mktemp -d)
-bash test/seed-cold.sh "$cold_trial"
-PI_MEMORY_DIR="$cold_trial/mem" bun test/rpc-drive.ts \
-  "$cold_trial/proj" '<provider/model>' test/sessions-cold.json -ne -np -e "$PWD" --prompt-template "$PWD/tidy.md"
+pi install /absolute/path/to/memora/packages/pi-memory
 ```
 
-## Releasing
+**DSH：** 在插件管理器中选择本地 DSH 包，或调用 `plugin_manager`：
 
-Edit the package and run the tests in `test/` as described above. Add a `## [X.Y.Z] - YYYY-MM-DD` entry to `CHANGELOG.md` and commit the changes on `main`. From a clean working tree, run:
+```json
+{
+  "action": "install_bundle",
+  "target": "/absolute/path/to/memora/packages/dsh-memory"
+}
+```
+
+根目录是私有 workspace，不是插件安装目标。旧 pi-memory 的已发布 tag 保持原样；新的本地安装使用上面的适配器目录。
+
+安装后正常聊天即可。输入 `/tidy` 或要求整理记忆，会按共享指南检查、归档、合并和清理记忆。
+
+## 记忆数据
+
+| 宿主 | 默认根目录 | 覆盖方式 |
+| --- | --- | --- |
+| pi | `~/.pi/agent/memory/` | `PI_MEMORY_DIR` |
+| DSH | `~/.dsh/memory/` | 插件 `directory`、`DSH_MEMORY_DIR` 或 `DSH_HOME` |
+
+两个宿主默认各自存储。共用核心不会自动合并记忆数据；需要共用时，将它们指向同一个根目录。数据格式是 `global/` 和 `projects/<项目路径编码>/`，每个目录有 `MEMORY.md`、记忆正文和 `archive/`。路径编码继承原版，某些含连字符的项目路径可能重名。
+
+文件读写继续遵守宿主的权限规则。pi 的非交互运行和 DSH 子代理不主动加载记忆；具体生命周期范围见各适配器说明。
+
+## 修改一次，两边生效
+
+提示词的唯一源文件是 [`packages/core/GUIDE.md`](packages/core/GUIDE.md) 和 [`packages/core/tidy.md`](packages/core/tidy.md)。它们保留了原 pi-memory 的完整内容。
+
+修改核心源码或提示词后：
 
 ```bash
-scripts/release.sh X.Y.Z
+npm run build
+npm test
 ```
 
-The script sets the package version, commits it if changed, tags the release, pushes `main` and the tag, and creates a GitHub release from the changelog entry. Then install the new tag:
+构建同时更新两个适配器，校验会拒绝过期产物。宿主接口变更只改对应适配器，共享行为变更通过核心和两端契约测试。不要直接编辑生成的 `lib/core/`。
+
+核心和 pi 测试不调用模型。DSH 的真实 Cordis 集成测试需要指定已安装的运行时；没有指定时明确跳过：
 
 ```bash
-pi install git:github.com/zhoupb01/pi-memory@vX.Y.Z
+DSH_TEST_RUNTIME=/absolute/path/to/dsh/node_modules npm test
 ```
+
+模型是否正确保存、纠错、遗忘或归档，仍需要实际模型会话验证。pi 的原始会话样例保留在其适配器的 `test/` 中。
+
+## 分发与版本
+
+```bash
+npm run pack:adapters
+```
+
+生成独立的 `pi-memory-<version>.tgz` 和 `dsh-memory-<version>.tgz`。两者包含相同核心和提示词，不依赖尚未发布的 `@memora/core` npm 包。
+
+版本和 [CHANGELOG](CHANGELOG.md) 由仓库统一维护。`scripts/release.sh <version>` 会检查两端、同步版本、创建 tag，并通过配置的 `origin` 发布 GitHub release 及两个插件包；只在准备发布时运行。发布目标从 `origin` 明确解析，不依赖 GitHub CLI 的默认仓库。Memora 的远端地址是 `https://github.com/zhoupb01/memora.git`。
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE)。保留 pi-memory 的原始历史和版权；DSH 图标为原创，同样采用 MIT 许可证。

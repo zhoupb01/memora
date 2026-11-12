@@ -1,6 +1,15 @@
 # Changelog
 
-Release notes for pi-memory.
+Release notes for Memora and its native adapters. Earlier pi-memory history is retained below.
+
+## [Unreleased]
+
+- Introduce Memora as a neutral workspace with peer pi-memory and dsh-memory adapters.
+- Extract host-independent memory policy, project discovery, index handling and prompt rendering into `packages/core`.
+- Preserve the complete original guide and `/tidy` prompt as the core's single source of truth.
+- Build the same core into both standalone plugin packages, with no runtime dependency on an unpublished core package.
+- Add core, cross-adapter, distribution and real Cordis integration tests.
+- Use one workspace lockfile and synchronized versions for repository releases.
 
 ## [0.1.0] - 2026-11-06
 

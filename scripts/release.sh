@@ -14,6 +14,17 @@ tag="v$version"
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 [[ $(git branch --show-current) == main ]] || fail 'Current branch must be main'
 [[ -z $(git status --porcelain) ]] || fail 'Working tree must be clean'
+origin_url=$(git remote get-url origin) || fail 'Configure the Memora origin remote before releasing'
+case "$origin_url" in
+  https://*) release_repo=${origin_url#https://} ;;
+  git@*:*) release_repo=${origin_url#git@}; release_repo=${release_repo/:/\/} ;;
+  *) fail 'origin must use https://host/owner/repo or git@host:owner/repo' ;;
+esac
+release_repo=${release_repo%.git}
+[[ $release_repo =~ ^[a-zA-Z0-9.-]+/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]] || fail 'Cannot resolve the GitHub release repository from origin'
+
+# One repository release covers the core and both peer adapters.
+npm test
 
 # Keep the section's trailing newlines when passing notes to gh.
 notes=$(
@@ -34,12 +45,14 @@ fi
 remote_tag=$(git ls-remote --tags origin "refs/tags/$tag") || fail 'Cannot read tags from origin'
 [[ -z $remote_tag ]] || fail "Tag $tag already exists on origin"
 
-npm pkg set "version=$version"
-if ! git diff --quiet -- package.json; then
-  git commit -am "Release $tag"
+npm version "$version" --no-git-tag-version --allow-same-version --workspaces --include-workspace-root --ignore-scripts
+if ! git diff --quiet -- package.json packages/core/package.json packages/pi-memory/package.json packages/dsh-memory/package.json package-lock.json; then
+  git add -- package.json packages/core/package.json packages/pi-memory/package.json packages/dsh-memory/package.json package-lock.json
+  git commit -m "Release $tag"
 fi
+npm run pack:adapters
 git tag -a "$tag" -m "$tag"
 git push origin main
 git push origin "$tag"
-gh release create "$tag" --title "$tag" --notes "$notes"
-printf 'Released %s. Upgrade pi with: pi install git:github.com/zhoupb01/pi-memory@%s\n' "$tag" "$tag"
+gh release create "$tag" "pi-memory-${version}.tgz" "dsh-memory-${version}.tgz" --repo "$release_repo" --verify-tag --title "Memora $tag" --notes "$notes"
+printf 'Released Memora %s with pi-memory and dsh-memory packages.\n' "$tag"

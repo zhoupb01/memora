@@ -1,0 +1,16 @@
+{
+  "name": "@memora/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Host-independent Markdown memory policy and context rendering.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhoupb01/memora.git",
+    "directory": "packages/core"
+  },
+  "exports": {
+    ".": "./index.js"
+  }
+}

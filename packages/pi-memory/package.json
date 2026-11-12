@@ -1,0 +1,21 @@
+{
+  "name": "pi-memory",
+  "version": "0.1.0",
+  "description": "Memora's native pi adapter for long-term Markdown memory.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhoupb01/memora.git",
+    "directory": "packages/pi-memory"
+  },
+  "keywords": ["pi-package", "memora"],
+  "files": ["index.ts", "lib/core/", "LICENSE", "README.md"],
+  "scripts": {
+    "prepack": "node ../../scripts/build.mjs"
+  },
+  "pi": {
+    "extensions": ["./index.ts"],
+    "prompts": ["./lib/core/tidy.md"]
+  }
+}
