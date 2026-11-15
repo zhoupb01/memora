@@ -4,6 +4,8 @@ Release notes for Memora and its native adapters. Earlier pi-memory history is r
 
 ## [Unreleased]
 
+- Fix dsh-memory turns and `/tidy` failing on DSH 0.2.2-rc.2: replace the unavailable `agents.roots()` call with live-instance lookup and durable subagent-origin filtering. Runtime tests now use the real host agent registry and cover disposed instances replaced under the same ID.
+
 - Introduce Memora as a neutral workspace with peer pi-memory and dsh-memory adapters.
 - Extract host-independent memory policy, project discovery, index handling and prompt rendering into `packages/core`.
 - Preserve the complete original guide and `/tidy` prompt as the core's single source of truth.

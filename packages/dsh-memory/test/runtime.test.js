@@ -32,12 +32,14 @@ test("isolated Cordis runtime integration", {
     }
   };
   const [{ Context, Service }, { SystemPrompt, renderPrompt }, { CommandRuntime },
-    { Session, SESSION_FORMAT_VERSION, snapshotSessionEvent }, { assembleContextFor }] = await Promise.all([
+    { Session, SESSION_FORMAT_VERSION, snapshotSessionEvent }, { AgentRegistry, assembleContextFor },
+    { SessionProjectionRegistry }] = await Promise.all([
     load("@deepseek-ai/cordis"),
     load("@deepseek-ai/dsh-system-prompt"),
     load("@deepseek-ai/dsh-commands"),
     load("@deepseek-ai/dsh-session"),
     load("@deepseek-ai/dsh-agent"),
+    load("@deepseek-ai/dsh-session-projection"),
   ]);
   const runtimeVersion = requireRuntime("@deepseek-ai/dsh-system-prompt/package.json").version;
   t.diagnostic(`Runtime: DSH ${runtimeVersion}; Cordis ${requireRuntime("@deepseek-ai/cordis/package.json").version}`);
@@ -85,15 +87,10 @@ test("isolated Cordis runtime integration", {
       await writeFile(path, text);
     }
 
-    const roots = new Set();
     const directories = new Map();
     const cwdReads = [];
-    // Controlled external boundaries: no live agents, model, profile, filesystem
-    // service, or persistence backend is attached to this Cordis context.
-    class TestAgents extends Service {
-      constructor(ctx) { super(ctx, "agents"); }
-      roots() { return [...roots]; }
-    }
+    // Agent membership uses the real registry. Only working-directory lookup
+    // and followup delivery are controlled; no model or profile is attached.
     class TestWorkingDirectory extends Service {
       constructor(ctx) { super(ctx, "workingDirectory"); }
       get(session) {
@@ -102,13 +99,14 @@ test("isolated Cordis runtime integration", {
         return directories.get(session);
       }
     }
-    await ctx.plugin(TestAgents);
+    await ctx.plugin(SessionProjectionRegistry);
+    await ctx.plugin(AgentRegistry);
     await ctx.plugin(TestWorkingDirectory);
     await ctx.plugin(SystemPrompt, { includeHarnessIdentity: false });
     if (commands) await ctx.plugin(CommandRuntime);
 
-    function agent({ cwd = alphaCwd, origin, isRoot = true, parentSession } = {}) {
-      const id = `memory-test-${randomUUID()}`;
+    async function agent({ cwd = alphaCwd, origin, registered = true, parentSession,
+      id = `memory-test-${randomUUID()}` } = {}) {
       const session = Session.create(id, [], {
         version: SESSION_FORMAT_VERSION,
         id,
@@ -134,8 +132,8 @@ test("isolated Cordis runtime integration", {
         },
       };
       directories.set(session, cwd);
-      if (isRoot) roots.add(agent);
-      return { agent, received };
+      const dispose = registered ? await ctx.agents.register(agent) : undefined;
+      return { agent, received, dispose };
     }
     const mount = async () => {
       const plugin = ctx.plugin(memoryPlugin, { directory: root });
@@ -146,13 +144,13 @@ test("isolated Cordis runtime integration", {
     const execute = (agent, line = "/tidy", attachments = [], signal = new AbortController().signal) =>
       ctx.commands.execute(agent, line, attachments, signal);
     return { ctx, root, alpha, beta, alphaCwd, betaCwd, alphaIndex, betaIndex, directory,
-      roots, directories, cwdReads, agent, mount, assemble, execute };
+      directories, cwdReads, agent, mount, assemble, execute };
   }
 
   await t.test("section uses each agent's current cwd, refreshes memory, and preserves literal text", async (t) => {
     const f = await fixture(t);
-    const { agent: first } = f.agent();
-    const { agent: second } = f.agent({ cwd: f.betaCwd });
+    const { agent: first } = await f.agent();
+    const { agent: second } = await f.agent({ cwd: f.betaCwd });
     await f.mount();
     const firstAssembly = await f.assemble(first);
     const firstSection = firstAssembly.sections.find(({ name }) => name === sectionName);
@@ -179,24 +177,27 @@ test("isolated Cordis runtime integration", {
 
   await t.test("agentless, child, resumed subagent and unregistered assemblies skip memory", async (t) => {
     const f = await fixture(t);
-    const { agent: child } = f.agent({ isRoot: false });
-    const { agent: resumedSubagent } = f.agent({ origin: "subagent" });
-    const { agent: removed } = f.agent();
-    f.roots.delete(removed);
-    const { agent: resumedFork } = f.agent({ parentSession: "synthetic-parent" });
+    const { agent: child } = await f.agent({ origin: "subagent", parentSession: "synthetic-parent" });
+    const { agent: resumedSubagent } = await f.agent({ origin: "subagent" });
+    const { agent: unregistered } = await f.agent({ registered: false });
+    const { agent: removed, dispose } = await f.agent();
+    await dispose();
+    const { agent: replacement } = await f.agent({ id: removed.id });
+    const { agent: resumedFork } = await f.agent({ parentSession: "synthetic-parent" });
     await f.mount();
-    for (const agent of [undefined, child, resumedSubagent, removed]) {
+    for (const agent of [undefined, child, resumedSubagent, unregistered, removed]) {
       const assembly = await f.assemble(agent);
       assert.equal(assembly.sections.find(({ name }) => name === sectionName)?.text, "");
       assert.equal(renderPrompt(assembly), "");
     }
     assert.deepEqual(f.cwdReads, [], "skipped agents must not resolve or read memory");
     assert.ok(renderPrompt(await f.assemble(resumedFork)).includes("ALPHA_ONLY"));
+    assert.ok(renderPrompt(await f.assemble(replacement)).includes("ALPHA_ONLY"));
   });
 
   await t.test("/tidy is discoverable and sends identified UserMessages accepted by Session persistence/replay", async (t) => {
     const f = await fixture(t);
-    const { agent, received } = f.agent();
+    const { agent, received } = await f.agent();
     await f.mount();
     assert.deepEqual(f.ctx.commands.list(agent), [{ name: "tidy", description: tidyDescription }]);
     assert.equal(typeof f.ctx.commands.find(agent, "tidy")?.handler, "function");
@@ -244,11 +245,14 @@ test("isolated Cordis runtime integration", {
 
   await t.test("/tidy rejects children, arguments, attachments and cancellation without followups", async (t) => {
     const f = await fixture(t);
-    const root = f.agent();
-    const child = f.agent({ isRoot: false });
-    const resumedSubagent = f.agent({ origin: "subagent" });
+    const root = await f.agent();
+    const child = await f.agent({ origin: "subagent", parentSession: root.agent.id });
+    const resumedSubagent = await f.agent({ origin: "subagent" });
+    const removed = await f.agent();
+    await removed.dispose();
+    await f.agent({ id: removed.agent.id });
     await f.mount();
-    for (const { agent } of [child, resumedSubagent]) {
+    for (const { agent } of [child, resumedSubagent, removed]) {
       const { result } = await f.execute(agent);
       assert.equal(result.kind, "error");
       assert.match(result.text, /top-level interactive sessions/);
@@ -256,12 +260,12 @@ test("isolated Cordis runtime integration", {
     assert.deepEqual((await f.execute(root.agent, "/tidy extra")).result, { kind: "error", text: "Usage: /tidy" });
     assert.equal((await f.execute(root.agent, "/tidy", [{ type: "file", receiptId: "synthetic-receipt" }])).result.kind, "error");
     await assert.rejects(f.execute(root.agent, "/tidy", [], AbortSignal.abort(new Error("synthetic cancellation"))), /synthetic cancellation/);
-    assert.deepEqual([root.received, child.received, resumedSubagent.received], [[], [], []]);
+    assert.deepEqual([root.received, child.received, resumedSubagent.received, removed.received], [[], [], [], []]);
   });
 
   await t.test("plugin unload removes only its section and command and permits clean remount", async (t) => {
     const f = await fixture(t);
-    const { agent, received } = f.agent();
+    const { agent, received } = await f.agent();
     await f.ctx.plugin({ inject: ["systemPrompt", "commands"], apply(ctx) {
       ctx.systemPrompt.section({ name: "fixture:unrelated", order: 1, text: "Unrelated section" });
       ctx.commands.register({ name: "unrelated", description: "Unrelated command", handler: () => ({ kind: "success" }) });
@@ -287,7 +291,7 @@ test("isolated Cordis runtime integration", {
 
   await t.test("missing Commands keeps the plugin inactive in a minimal composition", async (t) => {
     const f = await fixture(t, { commands: false });
-    const { agent } = f.agent();
+    const { agent } = await f.agent();
     // Do not await a fiber deliberately waiting for its hard dependency.
     const plugin = f.ctx.plugin(memoryPlugin, { directory: f.root });
     await Promise.resolve();

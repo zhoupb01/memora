@@ -14,8 +14,10 @@ export const Config = Schema.object({
 
 export function apply(ctx, config) {
   const root = resolveMemoryRoot(config.directory);
+  // DSH records delegated sessions (including resumed children) in the header.
+  // parentSession also marks ordinary forks, so it is not a subagent check.
   const eligible = (agent) => Boolean(
-    agent && agent.session.header.origin !== "subagent" && ctx.agents.roots().includes(agent),
+    agent && agent.session.header.origin !== "subagent" && ctx.agents.get(agent.id) === agent,
   );
 
   // Global provider, agent-specific computation: no per-agent mutable cache,
