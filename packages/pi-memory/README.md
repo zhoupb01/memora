@@ -19,7 +19,7 @@ pi install /absolute/path/to/memora/packages/pi-memory
 
 不要同时安装旧 Git 来源和新的本地适配器，以免重复加载。Memora 根目录是中立 workspace，不再作为 pi 插件入口。原 pi-memory 仓库的既有版本 tag 不受这次本地重构影响。
 
-安装包含记忆扩展和 `/tidy` 模板。可直接要求记住偏好、回忆项目背景，或输入 `/tidy` 整理记忆。
+安装包含记忆扩展和 `/dream` 模板。可直接要求记住偏好、回忆项目背景，或输入 `/dream` 整理记忆。
 
 ## 行为
 
@@ -28,6 +28,7 @@ pi install /absolute/path/to/memora/packages/pi-memory
 - 默认根目录为 pi agent home 下的 `memory/`，通常是 `~/.pi/agent/memory/`；`PI_MEMORY_DIR` 可覆盖。
 - 使用 `ctx.cwd` 识别项目，按最近 `.git` 目录或文件确定项目根。
 - 每次运行重读共享指南和两份索引，每份索引最多 200 行。
+- 共享指南鼓励在有真实信号、拿不准时保存，也保存用户随口提到的个人信息；项目记忆目录中的单个 `open-threads.md` 记录未完成工作，完成后移除事项。两个适配器都通过指南要求模型在结束每次回答前回看交流，保存符合条件的内容，不增加模型请求。
 - 模型使用 pi 的普通文件工具维护 Markdown，插件没有自动写入逻辑。
 
 ## 开发与测试
@@ -41,7 +42,7 @@ trial=$(mktemp -d)
 mkdir -p "$trial/project/.git"
 PI_MEMORY_DIR="$trial/mem" bun test/rpc-drive.ts \
   "$trial/project" '<provider/model>' test/sessions.json \
-  -ne -np -e "$PWD" --prompt-template "$PWD/lib/core/tidy.md"
+  -ne -np -e "$PWD" --prompt-template "$PWD/lib/core/dream.md"
 ```
 
 冷库样例：
@@ -51,11 +52,11 @@ cold_trial=$(mktemp -d)
 bash test/seed-cold.sh "$cold_trial"
 PI_MEMORY_DIR="$cold_trial/mem" bun test/rpc-drive.ts \
   "$cold_trial/proj" '<provider/model>' test/sessions-cold.json \
-  -ne -np -e "$PWD" --prompt-template "$PWD/lib/core/tidy.md"
+  -ne -np -e "$PWD" --prompt-template "$PWD/lib/core/dream.md"
 ```
 
 seed 脚本会删除并重建目标目录，仅使用专用临时目录；样例日期固定在 2026 年 11 月，需要结合运行日期判断过期行为。
 
 ## 分发
 
-从仓库根目录运行 `npm run pack:adapters`。pi 安装包包含入口、核心 JavaScript、完整指南和 `/tidy` 模板，可独立于仓库使用。MIT 许可证。
+从仓库根目录运行 `npm run pack:adapters`。pi 安装包包含入口、核心 JavaScript、完整指南和 `/dream` 模板，可独立于仓库使用。MIT 许可证。

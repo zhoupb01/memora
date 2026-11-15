@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { test } from "node:test";
-import { buildMemoryPrompt, readTidyTemplate } from "../index.js";
+import { buildMemoryPrompt, readDreamTemplate } from "../index.js";
 
 const overflowWarning = "(MEMORY.md is over 200 lines; the rest is not shown. Move outdated entries to cold storage to bring it back under 200 lines.)";
 const fixedDate = () => new Date(2026, 10, 12, 0, 5);
@@ -208,7 +208,7 @@ test("successive calls refresh local date, cwd, indexes and archive counts", (t)
   assert.equal(indexes(prompt(f, { cwd: other })).project, "PROJECT_UPDATED_IN_PLACE");
 });
 
-test("the entire original guide and current-state layout are preserved literally", (t) => {
+test("the entire guide and current-state layout are preserved literally", (t) => {
   const f = fixture(t);
   const cwd = join(f.directory, "项目 with {{literal-braces}}");
   mkdirSync(cwd);
@@ -242,9 +242,9 @@ ${projectIndex}`;
   assert.equal(prompt(f, { cwd }), expected);
 });
 
-test("tidy returns the original description and full body without frontmatter", () => {
-  assert.deepEqual(readTidyTemplate(), {
-    description: "Tidy long-term memory — delete wrong ones, archive outdated ones, merge duplicates",
-    text: 'Tidy up long-term memory now. Follow the checklist in the "Tidying" section of the long-term memory instructions step by step, then report as its step 5 says.',
+test("dream returns the shared description and full body without frontmatter", () => {
+  assert.deepEqual(readDreamTemplate(), {
+    description: "Dream — tidy long-term memory: delete wrong ones, archive outdated ones, merge duplicates",
+    text: 'Dream now: tidy up long-term memory. Follow the checklist in the "Dreaming" section of the long-term memory instructions step by step, then report as its step 5 says.',
   });
 });

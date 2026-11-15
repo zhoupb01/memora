@@ -1,6 +1,6 @@
 # dsh-memory
 
-Memora 的 DeepSeek Harness 原生适配器，与 pi 适配器平级，共用 `packages/core` 中的记忆策略和提示词。此包负责 DSH 配置、会话筛选、提示词注册与 `/tidy` 投递；核心模块负责记忆上下文。
+Memora 的 DeepSeek Harness 原生适配器，与 pi 适配器平级，共用 `packages/core` 中的记忆策略和提示词。此包负责 DSH 配置、会话筛选、提示词注册与 `/dream` 投递；核心模块负责记忆上下文。
 
 ## 安装
 
@@ -22,7 +22,7 @@ npm run build
 
 也可以通过插件管理器安装打包后的 DSH 插件。安装影响当前 profile 的所有会话，是否即时生效以返回的 `application` 和 `nextStep` 为准；更新已加载的 JavaScript 模块可能要求重启 DSH。
 
-安装后正常聊天即可。`/tidy` 或自然语言“整理一下记忆”使用共享指南。命令不接收参数，原始整理模板正文会通过 `agent.followup()` 作为普通用户消息入队，随后由模型执行。插件不直接改写、删除或归档记忆。
+安装后正常聊天即可。`/dream` 或自然语言“整理一下记忆”使用共享指南。命令不接收参数，原始整理模板正文会通过 `agent.followup()` 作为普通用户消息入队，随后由模型执行。插件不直接改写、删除或归档记忆。
 
 ## 存储
 

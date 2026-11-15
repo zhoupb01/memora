@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Schema from "@deepseek-ai/schemastery";
-import { buildMemoryPrompt, readTidyTemplate, resolveMemoryRoot } from "./memory.js";
+import { buildMemoryPrompt, readDreamTemplate, resolveMemoryRoot } from "./memory.js";
 
 // The command surface is the interactive-profile boundary. In minimal/headless
 // compositions without it, Cordis leaves this plugin inactive.
@@ -31,16 +31,16 @@ export function apply(ctx, config) {
       : "",
   });
 
-  const template = readTidyTemplate();
+  const template = readDreamTemplate();
   ctx.commands.register({
-    name: "tidy",
+    name: "dream",
     description: template.description,
     handler: ({ agent, rawInput, signal }) => {
       signal.throwIfAborted();
       if (!eligible(agent)) {
         return { kind: "error", text: "Long-term memory is available in top-level interactive sessions only." };
       }
-      if (rawInput.trim()) return { kind: "error", text: "Usage: /tidy" };
+      if (rawInput.trim()) return { kind: "error", text: "Usage: /dream" };
 
       // A human slash command becomes a normal, identified user message. Use
       // the public UserMessage shape; followup records it in the durable inbox.
@@ -48,7 +48,7 @@ export function apply(ctx, config) {
         id: randomUUID(),
         role: "user",
         source: Object.freeze({ kind: "user" }),
-        content: Object.freeze([Object.freeze({ type: "text", text: readTidyTemplate().text })]),
+        content: Object.freeze([Object.freeze({ type: "text", text: readDreamTemplate().text })]),
       }));
       return { kind: "success" };
     },

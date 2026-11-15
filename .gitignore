@@ -7,4 +7,3 @@ packages/*/lib/
 packages/pi-memory/LICENSE
 packages/dsh-memory/LICENSE
 packages/dsh-memory/GUIDE.md
-packages/dsh-memory/tidy.md

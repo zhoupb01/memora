@@ -9,8 +9,8 @@ import test from "node:test";
 
 const runtimePath = process.env.DSH_TEST_RUNTIME;
 const sectionName = "dsh-memory:memory";
-const tidyDescription = "Tidy long-term memory — delete wrong ones, archive outdated ones, merge duplicates";
-const tidyText = 'Tidy up long-term memory now. Follow the checklist in the "Tidying" section of the long-term memory instructions step by step, then report as its step 5 says.';
+const dreamDescription = "Dream — tidy long-term memory: delete wrong ones, archive outdated ones, merge duplicates";
+const dreamText = 'Dream now: tidy up long-term memory. Follow the checklist in the "Dreaming" section of the long-term memory instructions step by step, then report as its step 5 says.';
 
 // Opt in to an external, already installed runtime. Never fall back to a real
 // profile, download packages, or load the plugin at all when this is skipped.
@@ -141,7 +141,7 @@ test("isolated Cordis runtime integration", {
       return plugin;
     };
     const assemble = (agent) => ctx.systemPrompt.assemble(agent ? assembleContextFor(agent) : {});
-    const execute = (agent, line = "/tidy", attachments = [], signal = new AbortController().signal) =>
+    const execute = (agent, line = "/dream", attachments = [], signal = new AbortController().signal) =>
       ctx.commands.execute(agent, line, attachments, signal);
     return { ctx, root, alpha, beta, alphaCwd, betaCwd, alphaIndex, betaIndex, directory,
       directories, cwdReads, agent, mount, assemble, execute };
@@ -195,15 +195,15 @@ test("isolated Cordis runtime integration", {
     assert.ok(renderPrompt(await f.assemble(replacement)).includes("ALPHA_ONLY"));
   });
 
-  await t.test("/tidy is discoverable and sends identified UserMessages accepted by Session persistence/replay", async (t) => {
+  await t.test("/dream is discoverable and sends identified UserMessages accepted by Session persistence/replay", async (t) => {
     const f = await fixture(t);
     const { agent, received } = await f.agent();
     await f.mount();
-    assert.deepEqual(f.ctx.commands.list(agent), [{ name: "tidy", description: tidyDescription }]);
-    assert.equal(typeof f.ctx.commands.find(agent, "tidy")?.handler, "function");
+    assert.deepEqual(f.ctx.commands.list(agent), [{ name: "dream", description: dreamDescription }]);
+    assert.equal(typeof f.ctx.commands.find(agent, "dream")?.handler, "function");
     const startSeq = agent.session.seq;
     const first = await f.execute(agent);
-    const second = await f.execute(agent, "/tidy  \t");
+    const second = await f.execute(agent, "/dream  \t");
     assert.deepEqual(first.result, { kind: "success" });
     assert.deepEqual(second.result, { kind: "success" });
     assert.equal(received.length, 2);
@@ -211,7 +211,7 @@ test("isolated Cordis runtime integration", {
     for (const message of received) {
       assert.equal(typeof message.id, "string");
       assert.ok(message.id.length > 0);
-      assert.deepEqual(message, { id: message.id, role: "user", source: { kind: "user" }, content: [{ type: "text", text: tidyText }] });
+      assert.deepEqual(message, { id: message.id, role: "user", source: { kind: "user" }, content: [{ type: "text", text: dreamText }] });
     }
     const events = agent.session.snapshotEvents(startSeq);
     assert.deepEqual(events.map(({ type }) => type), [
@@ -219,7 +219,7 @@ test("isolated Cordis runtime integration", {
       "command/run", "agent/inbox/spliced", "command/done",
     ]);
     for (const [offset, execution] of [[0, first], [3, second]]) {
-      assert.equal(events[offset].data.name, "tidy");
+      assert.equal(events[offset].data.name, "dream");
       assert.deepEqual(events[offset].data.source, { kind: "user" });
       assert.equal(events[offset].data.commandId, execution.commandId);
       assert.equal(events[offset + 2].data.commandId, execution.commandId);
@@ -243,7 +243,7 @@ test("isolated Cordis runtime integration", {
     assert.deepEqual(replayed.deriveMessages(), received);
   });
 
-  await t.test("/tidy rejects children, arguments, attachments and cancellation without followups", async (t) => {
+  await t.test("/dream rejects children, arguments, attachments and cancellation without followups", async (t) => {
     const f = await fixture(t);
     const root = await f.agent();
     const child = await f.agent({ origin: "subagent", parentSession: root.agent.id });
@@ -257,9 +257,9 @@ test("isolated Cordis runtime integration", {
       assert.equal(result.kind, "error");
       assert.match(result.text, /top-level interactive sessions/);
     }
-    assert.deepEqual((await f.execute(root.agent, "/tidy extra")).result, { kind: "error", text: "Usage: /tidy" });
-    assert.equal((await f.execute(root.agent, "/tidy", [{ type: "file", receiptId: "synthetic-receipt" }])).result.kind, "error");
-    await assert.rejects(f.execute(root.agent, "/tidy", [], AbortSignal.abort(new Error("synthetic cancellation"))), /synthetic cancellation/);
+    assert.deepEqual((await f.execute(root.agent, "/dream extra")).result, { kind: "error", text: "Usage: /dream" });
+    assert.equal((await f.execute(root.agent, "/dream", [{ type: "file", receiptId: "synthetic-receipt" }])).result.kind, "error");
+    await assert.rejects(f.execute(root.agent, "/dream", [], AbortSignal.abort(new Error("synthetic cancellation"))), /synthetic cancellation/);
     assert.deepEqual([root.received, child.received, resumedSubagent.received, removed.received], [[], [], [], []]);
   });
 
@@ -275,14 +275,14 @@ test("isolated Cordis runtime integration", {
     await plugin.dispose();
     assert.deepEqual((await f.assemble(agent)).sections.filter(({ text }) => text), [{ name: "fixture:unrelated", text: "Unrelated section" }]);
     assert.deepEqual(f.ctx.commands.list(agent).map(({ name }) => name), ["unrelated"]);
-    assert.equal(f.ctx.commands.find(agent, "tidy"), undefined);
+    assert.equal(f.ctx.commands.find(agent, "dream"), undefined);
     const count = agent.session.seq;
     assert.equal(await f.execute(agent), undefined);
     assert.equal(agent.session.seq, count);
     assert.deepEqual(received, []);
     const remounted = await f.mount();
     assert.equal((await f.assemble(agent)).sections.filter(({ name }) => name === sectionName).length, 1);
-    assert.equal(f.ctx.commands.list(agent).filter(({ name }) => name === "tidy").length, 1);
+    assert.equal(f.ctx.commands.list(agent).filter(({ name }) => name === "dream").length, 1);
     assert.equal((await f.execute(agent)).result.kind, "success");
     assert.equal(received.length, 1);
     await remounted.dispose();

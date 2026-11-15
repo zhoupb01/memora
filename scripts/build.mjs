@@ -8,7 +8,7 @@ if (args.length > 1 || (args.length === 1 && args[0] !== "--check")) {
 }
 const check = args[0] === "--check";
 const repo = new URL("../", import.meta.url);
-const coreFiles = ["index.js", "GUIDE.md", "tidy.md"];
+const coreFiles = ["index.js", "GUIDE.md", "dream.md"];
 const outputs = [];
 for (const adapter of ["pi-memory", "dsh-memory"]) {
   for (const name of coreFiles) {
@@ -17,11 +17,9 @@ for (const adapter of ["pi-memory", "dsh-memory"]) {
   outputs.push(["LICENSE", `packages/${adapter}/LICENSE`]);
 }
 
-// Keep the prompt files used by the pre-core DSH module generation readable
+// Keep the guide used by the pre-core DSH module generation readable
 // until that running Host restarts. New packages only read lib/core resources.
-for (const name of ["GUIDE.md", "tidy.md"]) {
-  outputs.push([`packages/core/${name}`, `packages/dsh-memory/${name}`]);
-}
+outputs.push(["packages/core/GUIDE.md", "packages/dsh-memory/GUIDE.md"]);
 
 let changed = 0;
 for (const [sourcePath, targetPath] of outputs) {

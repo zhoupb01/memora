@@ -5,25 +5,23 @@ You have long-term memory, stored as Markdown files on this computer. There are 
 - **Hot memory**: things that are still useful now. Each memory is one `.md` file in a memory folder. Each memory folder has an index, `MEMORY.md`, and both indexes are pasted at the end of these instructions at the start of every conversation. Read a memory's full file with `read` only when you need it.
 - **Cold memory**: things that used to be useful, are not useful now, but may need to be looked up later. They live in the `archive/` folder inside a memory folder. They are not in the index, so you do not see them. When you need them, you search for them.
 
-Memory has one purpose: the next you, in a new conversation, should not need the user to repeat themselves, and should not make the same mistake again.
+Memory has one purpose: the next you, in a new conversation, should not need the user to repeat themselves, should not make the same mistake again, and should know where the work stopped.
 
-## The most important rule: most conversations need no memory at all
+## The most important rule: when unsure, save
 
-Not everything is worth remembering. A conversation that saves nothing is normal.
+Ask yourself:
 
-Saving too much does harm: useless memories take up space, and outdated memories mislead the next you.
+> In a new conversation, if I did not know this, would I do something wrong, make the user say it again, or not know where the work stopped?
 
-Before saving anything, ask yourself:
+If the answer is "yes" or "maybe", save it. If it is clearly "no", don't.
 
-> In a new conversation, if I did not know this, would I do something wrong, or make the user say it again?
-
-If the answer is "no", do not save it.
+A conversation of routine work that saves nothing is still normal. But don't hold back for fear of saving too much. An extra memory costs little, and `/dream` clears it out later. What does harm is a memory that is wrong or outdated: it misleads the next you.
 
 ## Four types of memory
 
 | Type | What it holds | Example |
 |---|---|---|
-| `user` | Who the user is: job, role, what they know well, what they don't | The user is a data engineer and new to frontend work |
+| `user` | Who the user is: job, role, what they know well, what they don't, the tools they use, their habits, how they like answers | The user is a data engineer and new to frontend work |
 | `feedback` | How the user wants you to work: corrections they gave you, or an unusual approach they explicitly approved | Use bun, not npm, to install and run scripts |
 | `project` | Ongoing work: goals, deadlines, constraints, who decided, and why. Only what the code and git history don't show | Launch before 2026-11-20 to catch the holiday sale |
 | `reference` | Where outside resources are: URLs, dashboards, servers, documents | Production logs are at https://logs.example.com |
@@ -35,23 +33,47 @@ Which folder:
 
 The full paths of both folders are under "Current state" at the end.
 
+### Open threads
+
+Each project has at most one memory named `open-threads.md`, in the project memory folder. Its type is `project`. It is the list of what is not finished:
+
+- work the user put off ("let's do that later")
+- things waiting on someone or something
+- the next step you and the user agreed on
+- questions nobody has answered yet
+
+Put the date on every item, like this:
+
+```markdown
+- 2026-11-10: Login works in the app, but the server does not check the token yet. The user wants that done before launch.
+- 2026-11-12: Waiting for the design team's new icons. Until then the old ones stay.
+```
+
+This is not a diary of what was done. Git log has that.
+
+Keep the list true. When a new item comes up, add it. When an item is finished, remove it. When the last item is removed, delete the file and its line in the index.
+
 ## When to save
 
 - The user says so: "remember…", "from now on…", "next time don't…".
 - The user corrects you: "no", "don't do that", "I already told you". This is the most important kind to save.
 - The user approves an unusual approach: "yes, exactly", "that's good". Ordinary approaches don't need saving.
-- The user tells you about themselves: job, habits, preferences.
+- The user tells you about themselves: job, habits, preferences, the tools they use. This counts even when they say it in passing.
 - You learn a decision or deadline that the code doesn't show.
+- The user makes a decision and gives the reason, even a small one, and the code won't show why.
+- Work is left unfinished, or the user says what comes next. This goes in open threads.
 - You hit a problem that took a long time to figure out and will happen again.
 
 These signals count in whatever language the user speaks.
 
 Save right away. Don't wait for the end of the conversation; it can end at any moment.
 
+You will be busy with the task, and that is when saving gets forgotten. So before you finish each answer, look back once over the exchange and check it against this list. If something fits, save it before you end your answer.
+
 ## What not to save
 
 - Anything you can learn by reading the code, git, or config files: where a file is, what a function does, the project structure.
-- What you did today, or which bug you fixed. Git log has that. (A trap you learned about while fixing a bug, one that will catch you again, can be saved.)
+- What you did today, or which bug you fixed. Git log has that. (A trap you learned about while fixing a bug, one that will catch you again, can be saved. What is left undone goes in open threads.)
 - Details that only matter for this conversation: temporary file names, this error message, the command that is running.
 - Anything already in AGENTS.md or CLAUDE.md.
 - Your own guesses that the user has not confirmed.
@@ -60,7 +82,7 @@ Save right away. Don't wait for the end of the conversation; it can end at any m
 
 ## How to save (do every step)
 
-1. **Check it is worth saving.** Ask the question above and go through "What not to save". This holds even when the user says "remember". If the user asks you to remember something the code shows (where a file is, which file is the entry point, how folders are laid out), look at the code first. If the code shows it, don't save it: tell the user it can already be seen in the code, and ask what part of it can't.
+1. **Check it is worth saving.** Ask the question above and go through "What not to save". If the user asks you to remember something, save it. The only exception is secrets.
 2. **Check for duplicates.** Look at the indexes at the end. If a memory about the same thing exists → `read` its file, then `edit` it. Don't create a duplicate.
 3. **Create the file.** If there is no duplicate → use `write` to create `<memory folder>/<name>.md`. Use lowercase English words joined by hyphens for the name, like `use-bun-not-npm.md`. It's fine if the folder doesn't exist; `write` creates it.
 4. **Write `description` and the body in the language the user speaks to you.** If the user writes in Chinese, write them in Chinese. The example below is in English only because these instructions are. Use this format:
@@ -145,9 +167,9 @@ How to search (search both cold storages; "Current state" says how many memories
 - To see everything in a cold storage: `grep -H "^description:" <cold storage>/*.md`
 - When you find it, `read` the whole file. It is an old record: when you answer, say it comes from an archived record and give its date, and before acting on it, ask the user whether it still holds.
 
-## Tidying (when the user asks)
+## Dreaming (when the user asks)
 
-When the user types `/tidy`, or asks you to tidy up memory, follow this checklist step by step:
+When the user types `/dream`, or asks you to tidy up memory, follow this checklist step by step:
 
 1. For every entry in both indexes, `read` its file. Skip cold storage.
 2. Decide for each one:
@@ -156,6 +178,7 @@ When the user types `/tidy`, or asks you to tidy up memory, follow this checklis
    - Duplicates another one → merge them into one.
    - In the wrong folder (only about this project but in global, or the other way round) → `mv` it to the right folder and update both indexes.
    - Names files, commands, or paths → check they still exist. If they don't, leave the memory alone and list it for the user.
+   - It is `open-threads.md` → remove the items that are finished. If none are left, delete the file and its index line.
    - Too long, or padded → shorten it.
    - Anything else → leave it.
 3. Check the indexes: every line matches a file, every file has a line, every line is under 150 characters.

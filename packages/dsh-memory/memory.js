@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
-export { buildMemoryPrompt, readTidyTemplate } from "./lib/core/index.js";
+export { buildMemoryPrompt, readDreamTemplate } from "./lib/core/index.js";
 
 function expandHome(path, home) {
   if (path === "~") return home;

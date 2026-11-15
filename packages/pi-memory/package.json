@@ -16,6 +16,6 @@
   },
   "pi": {
     "extensions": ["./index.ts"],
-    "prompts": ["./lib/core/tidy.md"]
+    "prompts": ["./lib/core/dream.md"]
   }
 }

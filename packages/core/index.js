@@ -75,10 +75,10 @@ ${readIndex(globalFolder)}
 ${readIndex(projectFolder)}`;
 }
 
-/** Read the shared /tidy template, without exposing its YAML frontmatter to the model. */
-export function readTidyTemplate() {
-  const text = readFileSync(new URL("./tidy.md", import.meta.url), "utf8");
+/** Read the shared /dream template, without exposing its YAML frontmatter to the model. */
+export function readDreamTemplate() {
+  const text = readFileSync(new URL("./dream.md", import.meta.url), "utf8");
   const match = /^---\r?\ndescription: (.+)\r?\n---\r?\n([\s\S]+)$/.exec(text);
-  if (!match || !match[2].trim()) throw new Error("Invalid tidy.md prompt template");
+  if (!match || !match[2].trim()) throw new Error("Invalid dream.md prompt template");
   return { description: match[1], text: match[2].trimEnd() };
 }

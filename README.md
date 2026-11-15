@@ -20,9 +20,9 @@ memora/
 
 | 模块 | 职责 |
 | --- | --- |
-| [Core](packages/core/README.md) | `buildMemoryPrompt()` 与 `readTidyTemplate()`；不依赖任何宿主 |
+| [Core](packages/core/README.md) | `buildMemoryPrompt()` 与 `readDreamTemplate()`；不依赖任何宿主 |
 | [pi-memory](packages/pi-memory/README.md) | 接入 `before_agent_start`，使用 pi 的工作目录与记忆根 |
-| [dsh-memory](packages/dsh-memory/README.md) | 接入 Cordis 提示词、会话目录与 `/tidy` 命令 |
+| [dsh-memory](packages/dsh-memory/README.md) | 接入 Cordis 提示词、会话目录与 `/dream` 命令 |
 
 核心统一处理：最近的 Git/worktree 项目根、全局与项目索引、每份索引 200 行上限、冷库计数、当地日期和完整提示词。文件缺失按空记忆处理，其他读取错误向宿主报告。
 
@@ -56,7 +56,7 @@ pi install /absolute/path/to/memora/packages/pi-memory
 
 根目录是私有 workspace，不是插件安装目标。旧 pi-memory 的已发布 tag 保持原样；新的本地安装使用上面的适配器目录。
 
-安装后正常聊天即可。输入 `/tidy` 或要求整理记忆，会按共享指南检查、归档、合并和清理记忆。
+安装后正常聊天即可。输入 `/dream` 或要求整理记忆，会按共享指南检查、归档、合并和清理记忆。
 
 ## 记忆数据
 
@@ -71,7 +71,7 @@ pi install /absolute/path/to/memora/packages/pi-memory
 
 ## 修改一次，两边生效
 
-提示词的唯一源文件是 [`packages/core/GUIDE.md`](packages/core/GUIDE.md) 和 [`packages/core/tidy.md`](packages/core/tidy.md)。它们保留了原 pi-memory 的完整内容。
+提示词的唯一源文件是 [`packages/core/GUIDE.md`](packages/core/GUIDE.md) 和 [`packages/core/dream.md`](packages/core/dream.md)。共享指南放宽了保存条件：有真实信号、拿不准时也保存；用户随口提到的个人信息也算。未完成的工作和约定的下一步保存在项目记忆目录唯一的 `open-threads.md` 中，完成后移除对应事项。指南还要求模型在结束每次回答前回看交流，保存符合条件的内容，不增加模型请求。
 
 修改核心源码或提示词后：
 

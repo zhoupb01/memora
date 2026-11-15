@@ -25,7 +25,7 @@ The tests mount the actual plugin through real Cordis and exercise the real `Age
 
 - Each assembly uses the receiving agent's current cwd, including cwd changes and separate agents. Updated memory is read on the next assembly; template-like memory text remains literal.
 - Agentless calls, delegated children, resumed subagents, unregistered agents and removed agents contribute no memory. A removed instance stays ineligible when the same ID is registered again; the replacement and a top-level resumed fork remain eligible.
-- `/tidy` is listed, found and executed through the registry. It sends a distinct, identified `UserMessage` with the original tidy prompt. Command lifecycle events pair correctly.
+- `/dream` is listed, found and executed through the registry. It sends a distinct, identified `UserMessage` with the shared dream prompt. Command lifecycle events pair correctly.
 - Message shape is checked through the real Session import boundary. A synthetic Session log is written to JSONL, reloaded, and replayed as user messages.
 - Children, arguments, attachments and pre-cancelled execution send no followup.
 - Disposing the plugin's Cordis fiber removes its section and command while preserving unrelated registrations. Remounting works without duplicates.

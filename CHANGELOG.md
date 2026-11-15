@@ -4,6 +4,8 @@ Release notes for Memora and its native adapters. Earlier pi-memory history is r
 
 ## [Unreleased]
 
+- Loosen the shared save guide, track unfinished work in `open-threads.md`, ask the model to check what to save before ending each answer without another model request, and rename `/tidy` to `/dream` in both adapters.
+
 - Fix dsh-memory turns and `/tidy` failing on DSH 0.2.2-rc.2: replace the unavailable `agents.roots()` call with live-instance lookup and durable subagent-origin filtering. Runtime tests now use the real host agent registry and cover disposed instances replaced under the same ID.
 
 - Introduce Memora as a neutral workspace with peer pi-memory and dsh-memory adapters.
