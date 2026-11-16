@@ -82,11 +82,15 @@ npm test
 
 构建同时更新两个适配器，校验会拒绝过期产物。宿主接口变更只改对应适配器，共享行为变更通过核心和两端契约测试。不要直接编辑生成的 `lib/core/`。
 
-核心和 pi 测试不调用模型。DSH 的真实 Cordis 集成测试需要指定已安装的运行时；没有指定时明确跳过：
+核心和适配器测试不调用模型。真实 Pi 模板加载和 DSH Cordis 集成测试需要指定已安装的运行时；没有指定时明确跳过：
 
 ```bash
-DSH_TEST_RUNTIME=/absolute/path/to/dsh/node_modules npm test
+PI_TEST_RUNTIME=/absolute/path/to/node_modules/@earendil-works/pi-coding-agent \
+DSH_TEST_RUNTIME=/absolute/path/to/dsh/node_modules \
+npm test
 ```
+
+`PI_TEST_RUNTIME` 指向 Pi coding agent 包目录，用实际模板加载器验证 `/dream` 的 YAML 元数据；`DSH_TEST_RUNTIME` 指向完整 DSH 运行时或其 `node_modules`。两项可以单独设置。
 
 模型是否正确保存、纠错、遗忘或归档，仍需要实际模型会话验证。pi 的原始会话样例保留在其适配器的 `test/` 中。
 

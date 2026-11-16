@@ -4,16 +4,17 @@ Release notes for Memora and its native adapters. Earlier pi-memory history is r
 
 ## [Unreleased]
 
-- Loosen the shared save guide, track unfinished work in `open-threads.md`, ask the model to check what to save before ending each answer without another model request, and rename `/tidy` to `/dream` in both adapters.
+## [0.2.0] - 2026-11-16
 
-- Fix dsh-memory turns and `/tidy` failing on DSH 0.2.2-rc.2: replace the unavailable `agents.roots()` call with live-instance lookup and durable subagent-origin filtering. Runtime tests now use the real host agent registry and cover disposed instances replaced under the same ID.
-
-- Introduce Memora as a neutral workspace with peer pi-memory and dsh-memory adapters.
-- Extract host-independent memory policy, project discovery, index handling and prompt rendering into `packages/core`.
-- Preserve the complete original guide and `/tidy` prompt as the core's single source of truth.
-- Build the same core into both standalone plugin packages, with no runtime dependency on an unpublished core package.
-- Add core, cross-adapter, distribution and real Cordis integration tests.
-- Use one workspace lockfile and synchronized versions for repository releases.
+- Introduce Memora as one workspace with a shared memory core and peer pi-memory and dsh-memory adapters.
+- Move host-independent memory policy, project discovery, index handling and prompt rendering into `packages/core`; both standalone adapter packages include the same core and prompts without an unpublished runtime dependency.
+- Loosen the shared save guide, track unfinished work in `open-threads.md`, and ask the model to check what to save before ending each answer without another model request.
+- Rename `/tidy` to `/dream` in both adapters and maintain the complete guide and cleanup prompt in the shared core.
+- Fix DSH 0.2.2-rc.2 compatibility by replacing the unavailable `agents.roots()` call with live-instance lookup and durable subagent-origin filtering. Runtime tests cover disposed instances replaced under the same ID.
+- Fix invalid YAML metadata that caused Pi to skip the `/dream` prompt template, and add a regression check using Pi's actual template loader.
+- Add core, cross-adapter, distribution and real Cordis integration tests; document how to enable both hosts' runtime checks.
+- Synchronize the workspace, core and both adapters at version `0.2.0` using one workspace lockfile.
+- Preserve the existing Markdown memory format and separate default storage roots. Install each adapter from its package directory; the repository root is now a private workspace and is no longer a Pi installation target. Existing pinned `v0.1.0` Pi installations need to switch to the new adapter source.
 
 ## [0.1.0] - 2026-11-06
 

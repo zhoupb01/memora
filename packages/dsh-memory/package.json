@@ -1,6 +1,6 @@
 {
   "name": "dsh-memory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Memora's native DeepSeek Harness adapter for long-term Markdown memory.",
   "type": "module",
   "license": "MIT",

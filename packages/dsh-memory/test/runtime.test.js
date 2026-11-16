@@ -9,7 +9,7 @@ import test from "node:test";
 
 const runtimePath = process.env.DSH_TEST_RUNTIME;
 const sectionName = "dsh-memory:memory";
-const dreamDescription = "Dream — tidy long-term memory: delete wrong ones, archive outdated ones, merge duplicates";
+const dreamDescription = "Dream — tidy long-term memory; delete wrong ones, archive outdated ones, merge duplicates";
 const dreamText = 'Dream now: tidy up long-term memory. Follow the checklist in the "Dreaming" section of the long-term memory instructions step by step, then report as its step 5 says.';
 
 // Opt in to an external, already installed runtime. Never fall back to a real
