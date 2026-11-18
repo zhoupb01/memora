@@ -47,9 +47,11 @@ section: 工作方式
 
 - `memora sync`：从笔记重建全局和项目索引；索引内容没变就不写。
 - `memora resolve [dir] [--json]`：查项目记忆目录。Git 工作树使用主仓库名；不在 Git 中则向上找已有的同名项目记忆目录。
-- `memora dream`（尚未实现）：离线整理旧对话和笔记。
+- `memora dream [--since YYYY-MM-DD] [--dry-run] [--model <id>]`：手动回看 pi、DeepSeek Harness 和 Claude Code 的历史对话，补记遗漏，纠正、合并或归档旧笔记。需要在 `PATH` 上安装 pi，默认模型是 `sub2api/gpt-6.2-sol`。
 
-已实现的命令都支持 `--root <dir>`；未指定时读 `MEMORA_DIR`，再默认到 `~/.agents/memory`。
+所有命令都支持 `--root <dir>`；未指定时读 `MEMORA_DIR`，再默认到 `~/.agents/memory`。
+
+第一次运行 `memora dream` 只记录当前进度，不调用模型。之后只处理新记录；用 `--since` 可从指定的本地日期重读。`--dry-run` 只生成摘要和统计，不调用模型，也不更新进度。摘要和进度在 `<记忆目录>/.dream/`；如果记忆目录用 Git 管理，把 `.dream/` 加入 `.gitignore`。成功后，`dream` 重建索引，并在 Git 仓库中只提交记忆目录内的改动。失败时保留摘要和原进度，已写入的笔记不会自动回滚。
 
 ## 从 v1 迁移
 

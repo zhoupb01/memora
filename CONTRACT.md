@@ -6,7 +6,7 @@ My long-term memory is in `~/.agents/memory/`. It holds who I am, how I want wor
 
 In every conversation, whatever the question, before you answer:
 
-1. Read `~/.agents/memory/global/MEMORY.md`.
+1. Read all of `~/.agents/memory/global/MEMORY.md`, not just the start.
 2. Run `memora resolve` in the working directory. If it prints a project folder, read that folder's `MEMORY.md`, and its `NOW.md` if there is one.
 3. Open the notes whose lines touch the question. What they say overrides your defaults.
 

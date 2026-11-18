@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 
 export function resolveProject(root: string, directory = process.cwd()) {
   const cwd = resolve(directory);
-  const git = Bun.spawnSync(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd });
+  const git = Bun.spawnSync(["git", "-C", cwd, "rev-parse", "--path-format=absolute", "--git-common-dir"]);
   if (git.exitCode === 0) {
     const slug = basename(dirname(git.stdout.toString().trimEnd()));
     const folder = join(root, "projects", slug);

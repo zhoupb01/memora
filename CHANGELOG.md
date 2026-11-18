@@ -8,7 +8,8 @@ Release notes for Memora. Native adapter and earlier pi-memory history are retai
 
 - **Breaking:** Replace the pi and DSH plugins with a standalone Bun CLI and a shared agent contract. Project folders use repo names, and `NOW.md` replaces `open-threads.md`.
 - Add `memora sync` to rebuild indexes and `memora resolve` to find the matching project folder.
-- Add a one-off migration for the legacy store. `memora dream` is not yet implemented.
+- Add a one-off migration for the legacy store.
+- Add `memora dream` to curate notes from pi, DeepSeek Harness, and Claude Code transcripts, with a dry run and a transcript cursor.
 
 ## [0.3.0] - 2026-11-18
 

@@ -22,7 +22,7 @@ export function fixture() {
   return { home, cwd, root };
 }
 
-export function put(path: string, text = "") {
+export function put(path: string, text: string | Uint8Array = "") {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, text);
 }
@@ -30,7 +30,7 @@ export function put(path: string, text = "") {
 export function run(f: ReturnType<typeof fixture>, entry: string, args: string[], memoryDir?: string) {
   const result = Bun.spawnSync([process.execPath, fileURLToPath(new URL(`../${entry}`, import.meta.url)), ...args], {
     cwd: f.cwd,
-    env: { PATH: process.env.PATH, HOME: f.home, USERPROFILE: f.home, MEMORA_DIR: memoryDir },
+    env: { PATH: process.env.PATH, HOME: f.home, USERPROFILE: f.home, MEMORA_DIR: memoryDir, TZ: "UTC" },
   });
   return { code: result.exitCode, out: result.stdout.toString(), err: result.stderr.toString() };
 }
