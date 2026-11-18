@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { folderEntries, indexFile, noteFiles } from "./index-file";
 
-const memoryPaths = [".", ":(exclude).dream"];
 const exactRenames = "-M100%";
 const empty = () => ({ added: 0, changed: 0, moved: 0, deleted: 0 });
 const isNote = (path: string) => /^(global|projects)\//.test(path) && path.endsWith(".md") && path.split("/").at(-1) !== indexFile;
@@ -58,14 +57,14 @@ export function trackDreamChanges(root: string) {
   return (summary: string) => {
     if (before) return { counts: compare(before, notes(root)), commit: undefined, stat: undefined };
     const counts = empty();
-    if (!git(root, ["status", "--porcelain", "--untracked-files=all", "--", ...memoryPaths])) {
+    if (!git(root, ["status", "--porcelain", "--untracked-files=all", "--", "."])) {
       return { counts, commit: undefined, stat: undefined };
     }
-    git(root, ["add", "-A", "--", ...memoryPaths]);
-    git(root, ["commit", "--only", "-m", summary, "--", ...memoryPaths]);
+    git(root, ["add", "-A", "--", "."]);
+    git(root, ["commit", "--only", "-m", summary, "--", "."]);
     const commit = git(root, ["rev-parse", "HEAD"])!.trim();
-    const stat = git(root, ["show", "--relative", "--format=", "--stat", exactRenames, commit, "--", ...memoryPaths])!.trimEnd();
-    const entries = git(root, ["show", "--relative", "--format=", "--name-status", "-z", exactRenames, commit, "--", ...memoryPaths])!.split("\0");
+    const stat = git(root, ["show", "--relative", "--format=", "--stat", exactRenames, commit, "--", "."])!.trimEnd();
+    const entries = git(root, ["show", "--relative", "--format=", "--name-status", "-z", exactRenames, commit, "--", "."])!.split("\0");
     for (let i = 0; entries[i];) {
       const status = entries[i++][0];
       const path = entries[i++];

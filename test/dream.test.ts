@@ -106,10 +106,14 @@ test("a later failed chunk keeps the digest and cursor; retry runs chunks in ord
     }
     expect(chunk(prompt)).toContain("152: xxx");
     throw new Error("test failure");
-  })).toThrow("Dream chunk 2/2 failed: test failure");
+  })).toThrow(/Dream chunk 2\/2 failed: test failure[\s\S]*Digest: .*\.dream\/digest-/);
   expect(calls).toBe(2);
   expect(readFileSync(f.cursor, "utf8")).toBe(before);
-  expect([...new Bun.Glob("digest-*/chunk-*.md").scanSync(dirname(f.cursor))]).toHaveLength(2);
+  const directory = dirname(f.cursor);
+  expect([...new Bun.Glob("digest-*/chunk-*.md").scanSync(directory)]).toHaveLength(2);
+  const reports = [...new Bun.Glob("digest-*/report-*.md").scanSync(directory)];
+  expect(reports).toEqual([expect.stringMatching(/\/report-000001\.md$/)]);
+  expect(readFileSync(join(directory, reports[0]), "utf8")).toBe("First chunk done\n");
   calls = 0;
   f.invoke(({ prompt }) => {
     expect(chunk(prompt)).toContain(calls++ === 0 ? "0: xxx" : "152: xxx");
@@ -117,6 +121,28 @@ test("a later failed chunk keeps the digest and cursor; retry runs chunks in ord
   });
   expect(calls).toBe(2);
   expect(JSON.parse(readFileSync(f.cursor, "utf8"))[f.path].records).toBe(155);
+});
+
+test("sync failure names the digest and keeps all model reports", () => {
+  const f = setup();
+  f.invoke(noCall);
+  const before = readFileSync(f.cursor, "utf8");
+  for (let i = 0; i < 153; i++) appendFileSync(f.path, message(`${i}: ${"x".repeat(2000)}`));
+  let digest = "";
+  let calls = 0;
+  expect(() => f.invoke(({ prompt }) => {
+    digest = dirname(/^Chunk: (.+)$/m.exec(prompt)![1]);
+    if (++calls === 2) {
+      expect(readFileSync(join(digest, "report-000001.md"), "utf8")).toBe("Report 1\n");
+      const index = join(f.root, "global", "MEMORY.md");
+      rmSync(index);
+      put(join(index, "blocker"));
+    }
+    return `Report ${calls}`;
+  })).toThrow(/EISDIR[\s\S]*Digest: .*\.dream\/digest-/);
+  expect(calls).toBe(2);
+  expect(readFileSync(join(digest, "report-000002.md"), "utf8")).toBe("Report 2\n");
+  expect(readFileSync(f.cursor, "utf8")).toBe(before);
 });
 
 test("a live lock refuses a run; a dead PID is taken over", () => {
@@ -137,7 +163,7 @@ test("a live lock refuses a run; a dead PID is taken over", () => {
   expect(existsSync(f.cursor)).toBe(false);
 });
 
-test("successful dream commits only the memory root and reports actual note changes", () => {
+test.each([".dream/", "no ignore rules"])("successful dream commits only notes and indexes with %s", (ignore) => {
   const f = setup();
   const repo = dirname(f.root);
   const git = (...args: string[]) => {
@@ -152,7 +178,7 @@ test("successful dream commits only the memory root and reports actual note chan
   put(join(global, "archive.md"), note("Archive"));
   put(join(global, "edit.md"), note("Edit"));
   put(join(repo, "outside.txt"), "Before");
-  put(join(repo, ".gitignore"), "/home/\n");
+  if (ignore === ".dream/") put(join(repo, ".gitignore"), ".dream/\n");
   git("init", "--quiet");
   git("config", "user.name", "Test");
   git("config", "user.email", "test@example.test");
@@ -163,6 +189,10 @@ test("successful dream commits only the memory root and reports actual note chan
   appendFileSync(f.path, message("Commit initial notes"));
   f.invoke(() => "Initial memory");
   const initial = git("rev-parse", "HEAD");
+  expect(readFileSync(join(f.root, ".dream", ".gitignore"), "utf8")).toBe("*\n");
+  expect(git("ls-tree", "-r", "--name-only", initial).split("\n").sort()).toEqual([
+    "memory/global/MEMORY.md", "memory/global/archive.md", "memory/global/delete.md", "memory/global/edit.md",
+  ]);
   put(join(repo, "outside.txt"), "Must not commit");
   git("update-index", "--add", "--cacheinfo", `100644,${git("hash-object", "-w", "outside.txt")},outside.txt`);
   appendFileSync(f.path, message("Change notes"));
