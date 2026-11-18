@@ -1,5 +1,9 @@
 {
-  "name": "dsh-memory",
+  "name": "@zhoupb01/dsh-memory",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "version": "0.2.0",
   "description": "Memora's native DeepSeek Harness adapter for long-term Markdown memory.",
   "type": "module",

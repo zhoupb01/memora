@@ -45,14 +45,16 @@ npm run build
 pi install /absolute/path/to/memora/packages/pi-memory
 ```
 
-**DSH：** 在插件管理器中选择本地 DSH 包，或调用 `plugin_manager`：
+**DSH：** 在插件管理器中添加 npm 包 `@zhoupb01/dsh-memory`，或调用 `plugin_manager`：
 
 ```json
 {
   "action": "install_bundle",
-  "target": "/absolute/path/to/memora/packages/dsh-memory"
+  "target": "@zhoupb01/dsh-memory"
 }
 ```
+
+本地开发时，`target` 也可以使用构建后的 `/absolute/path/to/memora/packages/dsh-memory` 目录。npm 上未加 scope 的 `dsh-memory` 是另一个项目。
 
 根目录是私有 workspace，不是插件安装目标。旧 pi-memory 的已发布 tag 保持原样；新的本地安装使用上面的适配器目录。
 
@@ -100,7 +102,7 @@ npm test
 npm run pack:adapters
 ```
 
-生成独立的 `pi-memory-<version>.tgz` 和 `dsh-memory-<version>.tgz`。两者包含相同核心和提示词，不依赖尚未发布的 `@memora/core` npm 包。
+生成独立的 `pi-memory-<version>.tgz` 和 `zhoupb01-dsh-memory-<version>.tgz`。两者包含相同核心和提示词，不依赖尚未发布的 `@memora/core` npm 包。DSH 适配器以 `@zhoupb01/dsh-memory` 发布到 npm。
 
 版本和 [CHANGELOG](CHANGELOG.md) 由仓库统一维护。`scripts/release.sh <version>` 会检查两端、同步版本、创建 tag，并通过配置的 `origin` 发布 GitHub release 及两个插件包；只在准备发布时运行。发布目标从 `origin` 明确解析，不依赖 GitHub CLI 的默认仓库。Memora 的远端地址是 `https://github.com/zhoupb01/memora.git`。
 

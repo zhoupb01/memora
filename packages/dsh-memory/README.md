@@ -1,8 +1,21 @@
-# dsh-memory
+# @zhoupb01/dsh-memory
 
 Memora 的 DeepSeek Harness 原生适配器，与 pi 适配器平级，共用 `packages/core` 中的记忆策略和提示词。此包负责 DSH 配置、会话筛选、提示词注册与 `/dream` 投递；核心模块负责记忆上下文。
 
 ## 安装
+
+在 DSH 插件管理器中添加 npm 包 `@zhoupb01/dsh-memory`，或调用 `plugin_manager`：
+
+```json
+{
+  "action": "install_bundle",
+  "target": "@zhoupb01/dsh-memory"
+}
+```
+
+npm 上未加 scope 的 `dsh-memory` 是另一个项目；Memora 的包名为 `@zhoupb01/dsh-memory`。
+
+### 从源码安装
 
 先在 Memora 仓库根目录构建：
 

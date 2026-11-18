@@ -51,8 +51,9 @@ if ! git diff --quiet -- package.json packages/core/package.json packages/pi-mem
   git commit -m "Release $tag"
 fi
 npm run pack:adapters
+dsh_archive=$(node -p "const pkg = require('./packages/dsh-memory/package.json'); pkg.name.replace(/^@/, '').replace('/', '-') + '-' + pkg.version + '.tgz'")
 git tag -a "$tag" -m "$tag"
 git push origin main
 git push origin "$tag"
-gh release create "$tag" "pi-memory-${version}.tgz" "dsh-memory-${version}.tgz" --repo "$release_repo" --verify-tag --title "Memora $tag" --notes "$notes"
+gh release create "$tag" "pi-memory-${version}.tgz" "$dsh_archive" --repo "$release_repo" --verify-tag --title "Memora $tag" --notes "$notes"
 printf 'Released Memora %s with pi-memory and dsh-memory packages.\n' "$tag"

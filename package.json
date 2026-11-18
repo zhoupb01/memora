@@ -19,10 +19,10 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "check": "node scripts/build.mjs --check && node --check packages/core/index.js && npm --workspace dsh-memory run check",
+    "check": "node scripts/build.mjs --check && node --check packages/core/index.js && npm --workspace ./packages/dsh-memory run check",
     "test:core": "node --test packages/core/test/*.test.js",
     "test:adapters": "node --test test/*.test.mjs packages/dsh-memory/test/*.test.js",
     "test": "npm run build && npm run check && npm run test:core && npm run test:adapters",
-    "pack:adapters": "npm run build && npm pack --workspace pi-memory --workspace dsh-memory --ignore-scripts"
+    "pack:adapters": "npm run build && npm pack --workspace pi-memory --workspace ./packages/dsh-memory --ignore-scripts"
   }
 }
