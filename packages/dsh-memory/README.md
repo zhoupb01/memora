@@ -42,10 +42,10 @@ npm run build
 根目录优先级：
 
 1. 插件配置 `directory`，非空时生效。
-2. Host 进程环境变量 `DSH_MEMORY_DIR`。
-3. `$DSH_HOME/memory`；没有 `DSH_HOME` 时为 `~/.dsh/memory`。
+2. Host 进程环境变量 `MEMORA_DIR`，非空时生效。
+3. `~/.agents/memory/`。
 
-支持 `~/`。相对路径在插件加载时相对于 Host 工作目录解析，建议使用绝对路径。Desktop 环境变量应在启动应用前设置；已启动应用可通过插件配置编辑器设置：
+支持 `~` 和 `~/`。相对路径在插件加载时相对于 Host 工作目录解析，建议使用绝对路径。Desktop 环境变量应在启动应用前设置；已启动应用可通过插件配置编辑器设置：
 
 ```json
 { "directory": "/absolute/path/to/memory" }
@@ -53,7 +53,7 @@ npm run build
 
 记忆包含 `global/` 与 `projects/<项目路径编码>/`，各有 `MEMORY.md`、正文和 `archive/`。项目识别使用当前会话的 `workingDirectory`；切换目录后，下次提示词组装会读取对应项目记忆。
 
-默认与 pi 数据分开存储。需要共用时，把两个适配器配置到同一个根目录；构建和安装不会自动迁移记忆。DSH 的文件权限和审批规则照常生效，默认根目录通常在工作区外，使用普通文件工具保存时可能需要审批。
+DSH 和 pi 默认共用记忆。从旧版升级时，请按[迁移说明](https://github.com/zhoupb01/memora#从旧版迁移)移动旧记忆并手动合并重叠的索引。DSH 的文件权限和审批规则照常生效，默认根目录通常在工作区外，使用普通文件工具保存时可能需要审批。
 
 ## 生命周期
 

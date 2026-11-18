@@ -1,6 +1,6 @@
 # pi-memory
 
-Memora 的 pi 原生适配器，与 DSH 适配器平级，共用 `packages/core` 中的记忆策略和提示词。此包只处理 pi 生命周期、工作目录和默认记忆根；索引读取、项目识别、冷库计数和提示词组装都由核心完成。
+Memora 的 pi 原生适配器，与 DSH 适配器平级，共用 `packages/core` 中的记忆策略和提示词。此包只处理 pi 生命周期和工作目录；记忆根解析、索引读取、项目识别、冷库计数和提示词组装都由核心完成。
 
 ## 安装
 
@@ -25,11 +25,13 @@ pi install /absolute/path/to/memora/packages/pi-memory
 
 - `before_agent_start` 在 TUI/RPC 交互运行时更新同一 memory section。
 - pi 的 print/JSON 等 `hasUI` 为 false 的运行不注入记忆。
-- 默认根目录为 pi agent home 下的 `memory/`，通常是 `~/.pi/agent/memory/`；`PI_MEMORY_DIR` 可覆盖。
+- 默认根目录为 `~/.agents/memory/`，pi 和 DSH 默认共用记忆；`MEMORA_DIR` 可覆盖，支持 `~` 和 `~/`。
 - 使用 `ctx.cwd` 识别项目，按最近 `.git` 目录或文件确定项目根。
 - 每次运行重读共享指南和两份索引，每份索引最多 200 行。
 - 共享指南鼓励在有真实信号、拿不准时保存，也保存用户随口提到的个人信息；项目记忆目录中的单个 `open-threads.md` 记录未完成工作，完成后移除事项。两个适配器都通过指南要求模型在结束每次回答前回看交流，保存符合条件的内容，不增加模型请求。
 - 模型使用 pi 的普通文件工具维护 Markdown，插件没有自动写入逻辑。
+
+从旧版升级时，请按[迁移说明](https://github.com/zhoupb01/memora#从旧版迁移)移动旧记忆并手动合并重叠的索引。
 
 ## 开发与测试
 
@@ -40,7 +42,7 @@ pi install /absolute/path/to/memora/packages/pi-memory
 ```bash
 trial=$(mktemp -d)
 mkdir -p "$trial/project/.git"
-PI_MEMORY_DIR="$trial/mem" bun test/rpc-drive.ts \
+MEMORA_DIR="$trial/mem" bun test/rpc-drive.ts \
   "$trial/project" '<provider/model>' test/sessions.json \
   -ne -np -e "$PWD" --prompt-template "$PWD/lib/core/dream.md"
 ```
@@ -50,7 +52,7 @@ PI_MEMORY_DIR="$trial/mem" bun test/rpc-drive.ts \
 ```bash
 cold_trial=$(mktemp -d)
 bash test/seed-cold.sh "$cold_trial"
-PI_MEMORY_DIR="$cold_trial/mem" bun test/rpc-drive.ts \
+MEMORA_DIR="$cold_trial/mem" bun test/rpc-drive.ts \
   "$cold_trial/proj" '<provider/model>' test/sessions-cold.json \
   -ne -np -e "$PWD" --prompt-template "$PWD/lib/core/dream.md"
 ```

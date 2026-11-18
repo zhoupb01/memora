@@ -20,8 +20,8 @@ memora/
 
 | 模块 | 职责 |
 | --- | --- |
-| [Core](packages/core/README.md) | `buildMemoryPrompt()` 与 `readDreamTemplate()`；不依赖任何宿主 |
-| [pi-memory](packages/pi-memory/README.md) | 接入 `before_agent_start`，使用 pi 的工作目录与记忆根 |
+| [Core](packages/core/README.md) | `resolveMemoryRoot()`、`buildMemoryPrompt()` 与 `readDreamTemplate()`；不依赖任何宿主 |
+| [pi-memory](packages/pi-memory/README.md) | 接入 `before_agent_start`，使用 pi 的工作目录与共享记忆根 |
 | [dsh-memory](packages/dsh-memory/README.md) | 接入 Cordis 提示词、会话目录与 `/dream` 命令 |
 
 核心统一处理：最近的 Git/worktree 项目根、全局与项目索引、每份索引 200 行上限、冷库计数、当地日期和完整提示词。文件缺失按空记忆处理，其他读取错误向宿主报告。
@@ -64,12 +64,16 @@ pi install /absolute/path/to/memora/packages/pi-memory
 
 | 宿主 | 默认根目录 | 覆盖方式 |
 | --- | --- | --- |
-| pi | `~/.pi/agent/memory/` | `PI_MEMORY_DIR` |
-| DSH | `~/.dsh/memory/` | 插件 `directory`、`DSH_MEMORY_DIR` 或 `DSH_HOME` |
+| pi | `~/.agents/memory/` | `MEMORA_DIR` |
+| DSH | `~/.agents/memory/` | 先用插件 `directory`，再用 `MEMORA_DIR` |
 
-两个宿主默认各自存储。共用核心不会自动合并记忆数据；需要共用时，将它们指向同一个根目录。数据格式是 `global/` 和 `projects/<项目路径编码>/`，每个目录有 `MEMORY.md`、记忆正文和 `archive/`。路径编码继承原版，某些含连字符的项目路径可能重名。
+pi 和 DSH 默认共用记忆。数据格式是 `global/` 和 `projects/<项目路径编码>/`，每个目录有 `MEMORY.md`、记忆正文和 `archive/`。路径编码继承原版，某些含连字符的项目路径可能重名。
 
 文件读写继续遵守宿主的权限规则。pi 的非交互运行和 DSH 子代理不主动加载记忆；具体生命周期范围见各适配器说明。
+
+### 从旧版迁移
+
+把旧的 `~/.pi/agent/memory/` 和 `~/.dsh/memory/` 中的内容移到 `~/.agents/memory/`。如果两边有相同的记忆目录，请手动合并该目录下的 `MEMORY.md` 索引，不要覆盖。安装不会自动迁移记忆。
 
 ## 修改一次，两边生效
 

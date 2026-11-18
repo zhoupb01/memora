@@ -46,8 +46,8 @@ test("isolated Cordis runtime integration", {
   const memoryPlugin = await import("../index.js");
 
   async function fixture(t, { commands = true } = {}) {
-    // Both cwd and memory are synthetic. An explicit directory config prevents
-    // resolveMemoryRoot from reading DSH_MEMORY_DIR, DSH_HOME or ~/.dsh/memory.
+    // Both cwd and memory are synthetic. The explicit directory config takes
+    // priority over MEMORA_DIR and the shared home default.
     const temporaryBase = await realpath(tmpdir());
     const directory = await mkdtemp(join(temporaryBase, "dsh-memory-runtime-test-"));
     const ctx = new Context();

@@ -116,6 +116,8 @@ You will be busy with the task, and that is when saving gets forgotten. So befor
 
 ## Fix, delete, or move to cold storage
 
+Several agents share these memory folders. Add new memories freely and fix an obvious error in any note. Only merge, archive, or delete a note another agent wrote during a `/dream` pass the user asks for. Follow the rules below within that limit.
+
 First tell "wrong" apart from "outdated":
 
 - **Wrong** (never true, or the user says it's wrong) → **delete it**. Delete the file and its line in the index. Don't move wrong memories to cold storage; they would mislead you when found later.

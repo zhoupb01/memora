@@ -1,5 +1,17 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+
+/**
+ * Resolve the shared memory root from configuration, environment, or home.
+ * @param {string} [directory]
+ */
+export function resolveMemoryRoot(directory, env = process.env, home = homedir()) {
+  const override = directory?.trim() ? directory : env.MEMORA_DIR;
+  if (!override?.trim()) return resolve(home, ".agents", "memory");
+  if (override === "~" || /^~[/\\]/.test(override)) return resolve(join(home, override.slice(2)));
+  return resolve(override);
+}
 
 function findProjectRoot(cwd) {
   let root = resolve(cwd);

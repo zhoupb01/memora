@@ -1,28 +1,10 @@
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { registerHooks } from "node:module";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import test from "node:test";
-import { buildMemoryPrompt } from "../packages/dsh-memory/memory.js";
-
-// Load the actual TypeScript extension through Node's built-in type stripping.
-// Only the host dependency is replaced; no adapter implementation is copied.
-const hostFixture = new URL("./fixtures/pi-host.mjs", import.meta.url);
-const hooks = registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (specifier === "@earendil-works/pi-coding-agent") {
-      return { url: hostFixture.href, shortCircuit: true };
-    }
-    return nextResolve(specifier, context);
-  },
-});
-let installPi;
-try {
-  ({ default: installPi } = await import("../packages/pi-memory/index.ts"));
-} finally {
-  hooks.deregister();
-}
+import { apply as installDsh, Config } from "../packages/dsh-memory/index.js";
+import installPi from "../packages/pi-memory/index.ts";
 
 const listeners = [];
 installPi({ on: (name, listener) => listeners.push({ name, listener }) });
@@ -32,15 +14,19 @@ const beforeAgentStart = listeners[0].listener;
 const fixedNow = new Date(2026, 10, 12, 12, 0, 0).getTime();
 const overflow = "(MEMORY.md is over 200 lines; the rest is not shown. Move outdated entries to cold storage to bring it back under 200 lines.)";
 
-function fixture(t) {
+function fixture(t, { useDefault = false } = {}) {
   const temporaryBase = realpathSync(tmpdir());
   const directory = mkdtempSync(join(temporaryBase, "pi-dsh-adapter-parity-"));
-  const originalMemoryDir = process.env.PI_MEMORY_DIR;
-  const memoryRoot = join(directory, "memory");
-  process.env.PI_MEMORY_DIR = memoryRoot;
+  const originalEnv = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, MEMORA_DIR: process.env.MEMORA_DIR };
+  const memoryRoot = useDefault ? join(directory, ".agents", "memory") : join(directory, "memory");
+  process.env.HOME = process.env.USERPROFILE = directory;
+  if (useDefault) delete process.env.MEMORA_DIR;
+  else process.env.MEMORA_DIR = memoryRoot;
   t.after(() => {
-    if (originalMemoryDir === undefined) delete process.env.PI_MEMORY_DIR;
-    else process.env.PI_MEMORY_DIR = originalMemoryDir;
+    for (const [key, value] of Object.entries(originalEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     // Only remove the exact mkdtemp directory, never a caller-supplied path or
     // an unverified computed parent. A replaced/symlinked target fails closed.
     assert.equal(dirname(directory), temporaryBase);
@@ -73,10 +59,18 @@ function fixture(t) {
   function compare(cwd, input = event()) {
     beforeAgentStart(input, { hasUI: true, cwd });
     const piText = input.systemPromptOptions.sections.memory;
-    const dshText = buildMemoryPrompt({ root: memoryRoot, cwd, today: new Date() });
+    const agent = { id: "fixture", session: { header: {} } };
+    const sections = [];
+    installDsh({
+      agents: new Map([[agent.id, agent]]),
+      workingDirectory: { get: () => cwd },
+      systemPrompt: { section: (section) => sections.push(section) },
+      commands: { register() {} },
+    }, Config({}));
+    const dshText = sections.find(({ name }) => name === "dsh-memory:memory")?.text({ agent });
     assert.equal(typeof piText, "string");
     assert.ok(piText.startsWith("# Long-term memory\n"));
-    assert.equal(piText, dshText, "the real pi callback and DSH builder must produce identical complete text");
+    assert.equal(piText, dshText, "the pi and DSH adapters must produce identical complete text");
     assert.equal(input.systemPromptOptions.sections.unrelated, "preserve this section");
     assert.deepEqual(Object.keys(input.systemPromptOptions.sections).sort(), ["memory", "unrelated"]);
     return piText;
@@ -89,8 +83,8 @@ function fixture(t) {
 test("pi and DSH runtime prompt parity", {
   concurrency: false,
 }, async (t) => {
-  await t.test("missing indexes and archives use the same empty state and cwd fallback", (t) => {
-    const f = fixture(t);
+  await t.test("both adapters use the shared default root with no override", (t) => {
+    const f = fixture(t, { useDefault: true });
     const cwd = f.mkdir(join(f.directory, "no-git", "nested"));
     // Prove this case is actually testing the no-Git branch, even when TMPDIR
     // was configured by the caller; never create markers outside the fixture.
@@ -99,6 +93,7 @@ test("pi and DSH runtime prompt parity", {
       if (dirname(path) === path) break;
     }
     const prompt = f.compare(cwd);
+    assert.ok(prompt.includes(`- Global memory folder: ${f.globalFolder}\n`));
     assert.ok(prompt.includes(`(project: ${cwd})`));
     assert.equal(prompt.split("(no memories yet)").length - 1, 2);
     assert.equal(prompt.split("(0 memories)").length - 1, 2);
@@ -212,9 +207,8 @@ test("pi and DSH runtime prompt parity", {
     assert.ok(!prompt.includes("CWD_SHOULD_NOT_APPEAR"));
   });
 
-  await t.test("pi without hasUI leaves all sections untouched and never resolves a real home", (t) => {
-    const f = fixture(t);
-    delete process.env.PI_MEMORY_DIR;
+  await t.test("pi without hasUI leaves all sections untouched even without an override", (t) => {
+    const f = fixture(t, { useDefault: true });
     for (const hasUI of [false, undefined]) {
       const event = f.event();
       const original = structuredClone(event);
@@ -224,8 +218,5 @@ test("pi and DSH runtime prompt parity", {
       });
       assert.deepEqual(event, original);
     }
-    // Also prove the host import was intercepted: interactive use with no
-    // override fails in the controlled fixture instead of touching real home.
-    assert.throws(() => beforeAgentStart(f.event(), { hasUI: true, cwd: f.directory }), /pi parity fixture requires PI_MEMORY_DIR/);
   });
 });

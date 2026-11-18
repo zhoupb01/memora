@@ -5,10 +5,10 @@ Host-independent memory context, backed by ordinary Markdown files. This module 
 ## Interface
 
 ```js
-import { buildMemoryPrompt, readDreamTemplate } from "./index.js";
+import { buildMemoryPrompt, readDreamTemplate, resolveMemoryRoot } from "./index.js";
 
 const section = buildMemoryPrompt({
-  root: "/absolute/path/to/memory",
+  root: resolveMemoryRoot(),
   cwd: "/absolute/path/to/project",
   // Optional deterministic clock; default is the host's current local date.
   today: new Date(),
@@ -16,6 +16,8 @@ const section = buildMemoryPrompt({
 
 const { description, text } = readDreamTemplate();
 ```
+
+`resolveMemoryRoot(directory, env, home)` uses a nonblank explicit directory, then `env.MEMORA_DIR`, then `~/.agents/memory`. It expands `~`, `~/`, and `~\` using `home`. `env` and `home` default to the process environment and OS home directory.
 
 The adapter supplies its resolved memory root and the receiving session's actual working directory. Every call reads the guide, both indexes, and archive names again. The module returns text and performs no writes, registration, command dispatch, or model calls. Missing indexes or archive folders are empty; other I/O errors propagate.
 
@@ -27,7 +29,7 @@ The repository build copies this module and its resources into both adapter pack
 
 ## Deliberately outside the core
 
-- Host-specific default memory roots, environment variables and configuration.
+- Host-specific configuration sources, such as the DSH plugin setting.
 - Which interactive sessions or agents receive memory.
 - Prompt registration, slash-command discovery, and durable message delivery.
 - Permissions and model decisions to save, merge, delete, or archive files.

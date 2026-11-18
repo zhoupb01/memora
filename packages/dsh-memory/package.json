@@ -4,7 +4,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Memora's native DeepSeek Harness adapter for long-term Markdown memory.",
   "type": "module",
   "license": "MIT",
@@ -24,7 +24,6 @@
   },
   "files": [
     "index.js",
-    "memory.js",
     "lib/core/",
     "cordis.patch.yml",
     "locale/*.json",
@@ -34,7 +33,7 @@
   ],
   "scripts": {
     "test": "node --test",
-    "check": "node --check index.js && node --check memory.js && node --check lib/core/index.js",
+    "check": "node --check index.js && node --check lib/core/index.js",
     "prepack": "node ../../scripts/build.mjs"
   },
   "dependencies": {

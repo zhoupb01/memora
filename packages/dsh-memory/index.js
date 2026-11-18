@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import Schema from "@deepseek-ai/schemastery";
-import { buildMemoryPrompt, readDreamTemplate, resolveMemoryRoot } from "./memory.js";
+import { buildMemoryPrompt, readDreamTemplate, resolveMemoryRoot } from "./lib/core/index.js";
 
 // The command surface is the interactive-profile boundary. In minimal/headless
 // compositions without it, Cordis leaves this plugin inactive.
@@ -8,7 +8,7 @@ export const inject = ["agents", "systemPrompt", "workingDirectory", "commands"]
 
 export const Config = Schema.object({
   directory: Schema.string().default("").description(
-    "Memory root. Empty uses DSH_MEMORY_DIR, then $DSH_HOME/memory or ~/.dsh/memory. Supports ~/.",
+    "Memory root. Empty uses MEMORA_DIR, then ~/.agents/memory. Supports ~ and ~/.",
   ),
 });
 

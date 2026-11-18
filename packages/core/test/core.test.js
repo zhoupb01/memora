@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { test } from "node:test";
-import { buildMemoryPrompt, readDreamTemplate } from "../index.js";
+import { buildMemoryPrompt, readDreamTemplate, resolveMemoryRoot } from "../index.js";
 
 const overflowWarning = "(MEMORY.md is over 200 lines; the rest is not shown. Move outdated entries to cold storage to bring it back under 200 lines.)";
 const fixedDate = () => new Date(2026, 10, 12, 0, 5);
@@ -53,6 +53,20 @@ function indexes(prompt) {
 function prompt(f, options = {}) {
   return buildMemoryPrompt({ root: f.root, cwd: f.cwd, today: fixedDate(), ...options });
 }
+
+test("memory root prefers an explicit directory, then MEMORA_DIR, then the shared home folder", () => {
+  const home = resolve("test-home");
+  const shared = join(home, ".agents", "memory");
+  const env = { MEMORA_DIR: "~/override" };
+  assert.equal(resolveMemoryRoot("~/explicit", env, home), join(home, "explicit"));
+  assert.equal(resolveMemoryRoot("~", env, home), home);
+  assert.equal(resolveMemoryRoot("", env, home), join(home, "override"));
+  assert.equal(resolveMemoryRoot(undefined, { MEMORA_DIR: "~\\memory" }, home), join(home, "memory"));
+  assert.equal(resolveMemoryRoot(" \t", { MEMORA_DIR: "~" }, home), home);
+  assert.equal(resolveMemoryRoot(undefined, {}, home), shared);
+  assert.equal(resolveMemoryRoot("", { MEMORA_DIR: "" }, home), shared);
+  assert.equal(resolveMemoryRoot(" \t", { MEMORA_DIR: "\n " }, home), shared);
+});
 
 test("missing, empty and whitespace-only indexes produce the original empty state", (t) => {
   const f = fixture(t);

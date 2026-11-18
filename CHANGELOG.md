@@ -4,6 +4,12 @@ Release notes for Memora and its native adapters. Earlier pi-memory history is r
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-18
+
+- **Breaking:** pi and DSH now share `~/.agents/memory` by default. `MEMORA_DIR` replaces `PI_MEMORY_DIR` and `DSH_MEMORY_DIR`; `DSH_HOME` no longer sets the DSH memory default. DSH's explicit `directory` setting still takes priority.
+- Document how to move existing memory into the shared root and merge overlapping `MEMORY.md` indexes by hand.
+- Allow agents to add or fix shared notes during normal work, and reserve merging, archiving, or deleting another agent's notes for a user-requested `/dream`.
+
 ## [0.2.0] - 2026-11-16
 
 - Introduce Memora as one workspace with a shared memory core and peer pi-memory and dsh-memory adapters.

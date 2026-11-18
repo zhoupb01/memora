@@ -1,6 +1,6 @@
 {
   "name": "pi-memory",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Memora's native pi adapter for long-term Markdown memory.",
   "type": "module",
   "license": "MIT",
