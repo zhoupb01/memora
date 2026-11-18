@@ -1,9 +1,7 @@
 # Memora maintenance
 
-pi and DSH are peer adapters. Shared memory behavior and model-facing prompts belong in `packages/core`; adapters own only host configuration, lifecycle, and command delivery.
+Run `bun test` from the repository root. Tests invoke the CLI and migration script with temporary homes and memory roots. Use `bun add` for dependencies.
 
-Edit the core sources, then run `npm run build`. The `lib/core` directories inside adapter packages are generated distribution files; make source changes in the core, never in those copies.
+`bin/memora.ts` dispatches commands; shared note and index logic lives in `src/`. Keep `CONTRACT.md` verbatim unless the user supplies new wording.
 
-Run `npm test` from the repository root. Set `DSH_TEST_RUNTIME` to an installed DSH runtime or its `node_modules` to include real Cordis checks; otherwise those checks explicitly skip. Core behavior must pass through both adapter paths.
-
-Both plugin archives must run independently of the checkout. Build and inspect both packages after changing imports, resources, or package manifests. The repository root is a private workspace, not an adapter installation target.
+When changing `scripts/migrate-v2.ts`, verify preflight failures leave the fixture unchanged. Run the migration only on fixtures or scratch copies; the manager runs it on the real memory folder after review.

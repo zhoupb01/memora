@@ -1,8 +1,14 @@
 # Changelog
 
-Release notes for Memora and its native adapters. Earlier pi-memory history is retained below.
+Release notes for Memora. Native adapter and earlier pi-memory history are retained below.
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-11-18
+
+- **Breaking:** Replace the pi and DSH plugins with a standalone Bun CLI and a shared agent contract. Project folders use repo names, and `NOW.md` replaces `open-threads.md`.
+- Add `memora sync` to rebuild indexes and `memora resolve` to find the matching project folder.
+- Add a one-off migration for the legacy store. `memora dream` is not yet implemented.
 
 ## [0.3.0] - 2026-11-18
 

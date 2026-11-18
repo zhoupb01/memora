@@ -1,9 +1,3 @@
 node_modules/
-.npm-cache/
-*.tgz
 .DS_Store
 artifacts/
-packages/*/lib/
-packages/pi-memory/LICENSE
-packages/dsh-memory/LICENSE
-packages/dsh-memory/GUIDE.md

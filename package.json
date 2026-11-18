@@ -1,28 +1,17 @@
 {
   "name": "memora",
-  "version": "0.3.0",
-  "private": true,
-  "description": "One memory core. Native adapters for your agents.",
+  "version": "0.4.0",
+  "description": "Shared Markdown memory for your agents.",
   "type": "module",
+  "bin": {
+    "memora": "bin/memora.ts"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zhoupb01/memora.git"
   },
-  "engines": {
-    "node": ">=22.18.0"
-  },
-  "workspaces": [
-    "packages/core",
-    "packages/pi-memory",
-    "packages/dsh-memory"
-  ],
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "check": "node scripts/build.mjs --check && node --check packages/core/index.js && npm --workspace ./packages/dsh-memory run check",
-    "test:core": "node --test packages/core/test/*.test.js",
-    "test:adapters": "node --test test/*.test.mjs packages/dsh-memory/test/*.test.js",
-    "test": "npm run build && npm run check && npm run test:core && npm run test:adapters",
-    "pack:adapters": "npm run build && npm pack --workspace pi-memory --workspace ./packages/dsh-memory --ignore-scripts"
+  "dependencies": {
+    "yaml": "^2.9.1"
   }
 }
