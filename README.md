@@ -1,15 +1,21 @@
 # Memora
 
-Memora 是给多个 AI 助手共用的 Markdown 记忆库。不用装宿主插件。助手按需读笔记，只改单条笔记；Bun 命令 `memora` 负责重建索引。
+Memora 是给多个 AI 助手共用的 Markdown 记忆库。不用装宿主插件。助手按需读笔记，只改单条笔记；单文件命令 `memora` 负责重建索引。
 
 ## 安装
 
-先装 [Bun](https://bun.sh/)。在 Memora 仓库根目录运行：
+从 GitHub Releases 下载对应系统的 `memora` 可执行文件放入 `$HOME/.local/bin/memora`（无需安装运行时）；或用 Go 安装：
 
 ```bash
-bun install
 mkdir -p "$HOME/.local/bin"
-ln -s "$PWD/bin/memora.ts" "$HOME/.local/bin/memora"
+GOBIN="$HOME/.local/bin" go install github.com/zhoupb01/memora/cmd/memora@latest
+```
+
+在本地仓库中直接构建：
+
+```bash
+mkdir -p "$HOME/.local/bin"
+go build -ldflags="-s -w" -o "$HOME/.local/bin/memora" ./cmd/memora
 ```
 
 把 `$HOME/.local/bin` 加入 `PATH`。接入新助手时，将 [CONTRACT.md](CONTRACT.md) 原文贴进 `~/.agents/AGENTS.md`，再让该助手的规则文件引用它，并要求每次对话首次回答前按约定读取记忆。
@@ -55,8 +61,8 @@ section: 工作方式
 
 ## 从 v1 迁移
 
-停用旧版 pi 和 DSH 插件。先备份旧记忆，并在备份副本上试跑 `bun scripts/migrate-v2.ts <memory-root>`。检查报告和索引差异后，再对实际记忆目录运行一次。迁移脚本只接受本次迁移表里的旧项目目录名。
+停用旧版 pi 和 DSH 插件。先备份旧记忆，并在备份副本上试跑 `go run ./cmd/migrate-v2 <memory-root>`。检查报告和索引差异后，再对实际记忆目录运行一次。迁移脚本只接受本次迁移表里的旧项目目录名。
 
-开发验证：`bun test`。
+开发验证：`go test ./...`。
 
 [MIT](LICENSE)

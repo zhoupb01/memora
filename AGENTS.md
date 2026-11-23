@@ -1,7 +1,7 @@
 # Memora maintenance
 
-Run `bun test` from the repository root. Tests invoke the CLI and migration script with temporary homes and memory roots. Use `bun add` for dependencies.
+Run `go test ./...` from the repository root. Tests invoke the compiled CLI and migration command against temporary homes and memory roots. Use `go get` for dependencies.
 
-`bin/memora.ts` dispatches commands; shared note and index logic lives in `src/`. Keep `CONTRACT.md` verbatim unless the user supplies new wording.
+`cmd/memora` dispatches to the root `memora` package, which embeds `CONTRACT.md` and `DREAM.md` at build time. Keep `CONTRACT.md` verbatim unless the user supplies new wording.
 
-When changing `scripts/migrate-v2.ts`, verify preflight failures leave the fixture unchanged. Run the migration only on fixtures or scratch copies; the manager runs it on the real memory folder after review.
+When changing `cmd/migrate-v2`, verify preflight failures leave the fixture unchanged. Run the migration only on fixtures or scratch copies; the manager runs it on the real memory folder after review.

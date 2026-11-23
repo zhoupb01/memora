@@ -4,6 +4,8 @@ Release notes for Memora. Native adapter and earlier pi-memory history are retai
 
 ## [Unreleased]
 
+- Rewrite the CLI and v2 migration tool in Go (`cmd/memora`, `cmd/migrate-v2`) with `CONTRACT.md` and `DREAM.md` embedded, removing the Bun runtime dependency.
+
 ## [0.4.0] - 2026-11-18
 
 - **Breaking:** Replace the pi and DSH plugins with a standalone Bun CLI and a shared agent contract. Project folders use repo names, and `NOW.md` replaces `open-threads.md`.
