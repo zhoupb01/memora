@@ -1,7 +1,7 @@
 # Memora maintenance
 
-Run `go test ./...` from the repository root. Tests invoke the compiled CLI and migration command against temporary homes and memory roots. Use `go get` for dependencies.
+Run `npm test` from the repository root. It bundles `packages/core` (with `CONTRACT.md` and `DREAM.md`) into the three peer host plugins (`packages/pi-memory`, `packages/dsh-memory`, `packages/agy-memory`), validates `packages/agy-memory` with `agy plugin validate --strict` when `agy` is installed, and runs all unit, adapter parity, dream, and migration tests against temporary directories.
 
-`cmd/memora` dispatches to the root `memora` package, which embeds `CONTRACT.md` and `DREAM.md` at build time. Keep `CONTRACT.md` verbatim unless the user supplies new wording.
+Keep `CONTRACT.md` and `DREAM.md` verbatim unless the user supplies new wording.
 
-When changing `cmd/migrate-v2`, verify preflight failures leave the fixture unchanged. Run the migration only on fixtures or scratch copies; the manager runs it on the real memory folder after review.
+When changing `scripts/migrate-v2.mjs`, verify preflight failures leave the fixture unchanged. Run the migration only on fixtures or scratch copies; the manager runs it on the real memory folder after review.

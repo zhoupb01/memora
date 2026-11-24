@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "长期记忆",
+    "description": "Memora 的 DSH 记忆插件，与 pi、agy 共用核心；自动同步全局与项目索引，支持 /dream 跨工具对话整理。"
+  }
+}

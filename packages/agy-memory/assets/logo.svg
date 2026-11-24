@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Long-term memory">
+  <rect x="3" y="3" width="58" height="58" rx="15" fill="#164e63"/>
+  <path d="M17 17h30v35l-15-8-15 8z" fill="#cffafe"/>
+  <path d="M25 24h14M25 31h10" fill="none" stroke="#155e75" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="46" cy="17" r="10" fill="#fbbf24"/>
+  <path d="M46 12v10m-5-5h10" stroke="#164e63" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

@@ -1,26 +1,45 @@
 # Memora
 
-Memora 是给多个 AI 助手共用的 Markdown 记忆库。不用装宿主插件。助手按需读笔记，只改单条笔记；单文件命令 `memora` 负责重建索引。
+多个 AI 助手共用的本地 Markdown 长期记忆插件。不装全局命令、不依赖 Git、不修改用户的 `AGENTS.md`。
+
+三家插件（`pi`、DeepSeek Harness、`agy`）共用同一份记忆核心：每次开新对话自动从笔记文件头同步 `MEMORY.md` 索引，只把两份精简索引（全局 + 当前项目，硬限 200 行 / 25 KB，不含 `NOW.md` 正文）注入上下文；首次使用时自动建好空目录。
 
 ## 安装
 
-从 GitHub Releases 下载对应系统的 `memora` 可执行文件放入 `$HOME/.local/bin/memora`（无需安装运行时）；或用 Go 安装：
+按需在对应工具里安装插件即可，无需额外初始化步骤：
+
+### pi
 
 ```bash
-mkdir -p "$HOME/.local/bin"
-GOBIN="$HOME/.local/bin" go install github.com/zhoupb01/memora/cmd/memora@latest
+pi install /path/to/memora/packages/pi-memory
 ```
 
-在本地仓库中直接构建：
+### DeepSeek Harness (DSH)
+
+从 npm 安装：
 
 ```bash
-mkdir -p "$HOME/.local/bin"
-go build -ldflags="-s -w" -o "$HOME/.local/bin/memora" ./cmd/memora
+dsh plugin --profile desktop add @zhoupb01/dsh-memory
 ```
 
-把 `$HOME/.local/bin` 加入 `PATH`。接入新助手时，将 [CONTRACT.md](CONTRACT.md) 原文贴进 `~/.agents/AGENTS.md`，再让该助手的规则文件引用它，并要求每次对话首次回答前按约定读取记忆。
+或从本地仓库链接：
+
+```bash
+npm run build
+dsh plugin --profile desktop add link:/path/to/memora/packages/dsh-memory
+```
+
+### Antigravity (`agy`)
+
+```bash
+agy plugin install /path/to/memora/packages/agy-memory
+```
+
+卸载时直接用对应工具自带的 `remove` / `uninstall` 命令即可，不会在 `AGENTS.md` 或 `PATH` 留下残留。
 
 ## 记忆布局
+
+默认存储在 `~/.agents/memory`（可通过 `MEMORA_DIR` 环境变量覆盖，DSH 插件也可在插件设置里指定 `directory`）：
 
 ```text
 ~/.agents/memory/
@@ -35,7 +54,12 @@ go build -ldflags="-s -w" -o "$HOME/.local/bin/memora" ./cmd/memora
     └── archive/
 ```
 
-一条事实写一个文件。`NOW.md` 记当前进度和下一步，也用相同格式。`archive/` 是冷库，不进索引。不要手改 `MEMORY.md`。
+- **一条事实一个文件**：助手只读写单条 `.md` 笔记；`MEMORY.md` 由插件根据笔记头部自动重建，不要手改。
+- **项目识别**：通过向上查找 `.git` 目录或文件（支持 linked worktree 归并回主仓库名）自动定位 `projects/<项目名>/`；不在仓库内时向上匹配已有的同名项目记忆目录。
+- **当前进度**：项目未完事项和下一步写在 `NOW.md`，插件只向开场上下文注入索引行，不注入 `NOW.md` 正文。
+- **冷存储**：过时笔记移入 `archive/`，不进索引，需要历史背景时按需用 `rg` 搜索。
+
+笔记格式：
 
 ```markdown
 ---
@@ -47,22 +71,24 @@ section: 工作方式
 正文
 ```
 
-`type` 是 `user`、`feedback`、`project` 或 `reference`；`section` 仅用于全局笔记。`description` 是一行索引短句。
+`type` 为 `user`、`feedback`、`project` 或 `reference`；`section` 仅用于全局笔记分组。
 
-## 命令
+## `/dream` 整理
 
-- `memora sync`：从笔记重建全局和项目索引；索引内容没变就不写。
-- `memora resolve [dir] [--json]`：查项目记忆目录。Git 工作树使用主仓库名；不在 Git 中则向上找已有的同名项目记忆目录。
-- `memora dream [--since YYYY-MM-DD] [--dry-run] [--model <id>]`：手动回看 pi、DeepSeek Harness 和 Claude Code 的历史对话，补记遗漏，纠正、合并或归档旧笔记。需要在 `PATH` 上安装 pi，默认模型是 `sub2api/gpt-6.2-sol`。
+在助手会话中运行 `/dream`（支持 `--dry-run`、`--since YYYY-MM-DD`、`--model <id>`；在 `agy` 中可直接说运行 `dream` 技能）：
 
-所有命令都支持 `--root <dir>`；未指定时读 `MEMORA_DIR`，再默认到 `~/.agents/memory`。
-
-第一次运行 `memora dream` 只记录当前进度，不调用模型。之后只处理新记录；用 `--since` 可从指定的本地日期重读。`--dry-run` 只生成摘要和统计，不调用模型，也不更新进度。摘要、报告和进度在 `<记忆目录>/.dream/`，该目录会自动排除在 Git 提交之外。成功后，`dream` 重建索引，并在 Git 仓库中只提交记忆目录内的改动。失败时保留摘要、已完成的报告和原进度，已写入的笔记不会自动回滚。
+- 自动扫描 `pi`、DeepSeek Harness 和 Claude Code 的本地会话记录（首次运行仅记录当前游标基线，不调用模型）。
+- 补记遗漏偏好与项目进度，修正、合并或归档旧笔记（需要在 `PATH` 上可调用 `pi`，默认模型 `sub2api/gpt-6.2-sol`）。
+- 摘要、报告、游标保存在 `<记忆目录>/.dream/`；被覆盖或删除的原笔记会自动备份在当次 `digest-*/backup/` 下。
 
 ## 从 v1 迁移
 
-停用旧版 pi 和 DSH 插件。先备份旧记忆，并在备份副本上试跑 `go run ./cmd/migrate-v2 <memory-root>`。检查报告和索引差异后，再对实际记忆目录运行一次。迁移脚本只接受本次迁移表里的旧项目目录名。
+先备份旧记忆并在副本上试跑 `node scripts/migrate-v2.mjs <memory-root>`，核对无误后再对真实目录执行。
 
-开发验证：`go test ./...`。
+开发与验证：
+
+```bash
+npm test
+```
 
 [MIT](LICENSE)

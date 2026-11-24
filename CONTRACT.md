@@ -1,14 +1,10 @@
 # Shared memory
 
-My long-term memory is in `~/.agents/memory/`. It holds who I am, how I want work done, my projects, and where work stopped. Every agent I use reads and writes this same folder, so what one learns, the next one knows. Nothing in your context contains it yet.
+My long-term memory is in `~/.agents/memory/`. It holds who I am, how I want work done, my projects, and where work stopped. Every agent I use reads and writes this same folder, so what one learns, the next one knows. The indexes are below; note bodies are on disk.
 
 ## Read before your first answer
 
-In every conversation, whatever the question, before you answer:
-
-1. Read all of `~/.agents/memory/global/MEMORY.md`, not just the start.
-2. Run `memora resolve` in the working directory. If it prints a project folder, read that folder's `MEMORY.md`, and its `NOW.md` if there is one.
-3. Open the notes whose lines touch the question. What they say overrides your defaults.
+Before you answer, open the notes from the indexes below whose lines touch the question. What they say overrides your defaults.
 
 Notes can go stale. Before you act on a note that names a file, command or setting, check it still holds; if it doesn't, fix the note.
 
@@ -25,6 +21,6 @@ Save when I correct you or confirm an unusual approach, when you learn something
 - For `feedback` and `project` notes, follow the fact with a **Why:** line and a **How to apply:** line. Write dates as absolute dates. Write in my language.
 - Link related notes: `[[file-name]]` (the file name without `.md`) for a note in the same folder, a relative Markdown link for a note in another folder.
 - Where work stopped and the next step go in the project's `NOW.md`. Keep it short and current.
-- Never edit any `MEMORY.md` by hand. After you add, change, move or delete notes, run `memora sync`; it rebuilds every index from the notes.
-- Fix an obvious error in any note. Merging, archiving or deleting notes another agent wrote waits for `memora dream`, which I run.
+- Never edit any `MEMORY.md` by hand; indexes are rebuilt automatically from note frontmatter.
+- Fix an obvious error in any note. Merging, archiving or deleting notes another agent wrote waits for `/dream`, which I run.
 - Old notes live in each folder's `archive/`, outside the index. Search them with `rg` when history matters.

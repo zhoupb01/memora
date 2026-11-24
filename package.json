@@ -1,0 +1,33 @@
+{
+  "name": "memora",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Shared Markdown memory core with native plugins for pi, DeepSeek Harness, and Antigravity.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhoupb01/memora.git"
+  },
+  "engines": {
+    "node": ">=22.15.0"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/pi-memory",
+    "packages/dsh-memory",
+    "packages/agy-memory"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "test": "npm run build && npm run check && TZ=UTC node --test test/*.test.mjs packages/dsh-memory/test/*.test.js",
+    "pack:adapters": "npm run build && npm pack --workspace pi-memory --workspace ./packages/dsh-memory --ignore-scripts"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

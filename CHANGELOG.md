@@ -4,14 +4,15 @@ Release notes for Memora. Native adapter and earlier pi-memory history are retai
 
 ## [Unreleased]
 
-- Rewrite the CLI and v2 migration tool in Go (`cmd/memora`, `cmd/migrate-v2`) with `CONTRACT.md` and `DREAM.md` embedded, removing the Bun runtime dependency.
+- Ship Memora v2 as three self-contained host plugins (`packages/pi-memory`, `packages/dsh-memory`, `packages/agy-memory`) sharing one bundled Node core, removing the global `memora` CLI, `AGENTS.md` edits, and Go/Bun runtime requirements.
+- Auto-initialize `~/.agents/memory/global/MEMORY.md` and rebuild `MEMORY.md` indexes automatically from note frontmatter on session start; cap injected indexes at 200 lines / 25 KB and keep `NOW.md` bodies out of startup context.
+- Remove all `git` dependencies: resolve project slugs directly from `.git` directories and worktree `commondir` files, and back up modified or deleted notes under `.dream/<digest>/backup/` during `/dream`.
 
 ## [0.4.0] - 2026-11-18
 
-- **Breaking:** Replace the pi and DSH plugins with a standalone Bun CLI and a shared agent contract. Project folders use repo names, and `NOW.md` replaces `open-threads.md`.
-- Add `memora sync` to rebuild indexes and `memora resolve` to find the matching project folder.
+- **Breaking:** Project folders use repo names, `NOW.md` replaces `open-threads.md`, and `MEMORY.md` indexes are rebuilt from note frontmatter.
 - Add a one-off migration for the legacy store.
-- Add `memora dream` to curate notes from pi, DeepSeek Harness, and Claude Code transcripts, with a dry run and a transcript cursor.
+- Add `dream` curation across pi, DeepSeek Harness, and Claude Code transcripts, with a dry run and a transcript cursor.
 
 ## [0.3.0] - 2026-11-18
 

@@ -1,0 +1,8 @@
+{
+  "name": "agy-memory",
+  "version": "0.5.0",
+  "description": "Shared Markdown memory for Antigravity: automatic indexes and /dream curation.",
+  "author": "zhoupb",
+  "repository": "https://github.com/zhoupb01/memora",
+  "logo": "assets/logo.svg"
+}
