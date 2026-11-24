@@ -6,7 +6,13 @@
 
 ## 安装
 
-按需在对应工具里安装插件即可，无需额外初始化步骤：
+从源码目录安装前，先在仓库根目录执行一次构建：
+
+```bash
+npm install && npm run build
+```
+
+之后按需在对应工具里安装插件即可，无需额外初始化步骤：
 
 ### pi
 
@@ -16,7 +22,7 @@ pi install /path/to/memora/packages/pi-memory
 
 ### DeepSeek Harness (DSH)
 
-从 npm 安装：
+从 npm 安装（无需本地构建）：
 
 ```bash
 dsh plugin --profile desktop add @zhoupb01/dsh-memory
@@ -25,7 +31,6 @@ dsh plugin --profile desktop add @zhoupb01/dsh-memory
 或从本地仓库链接：
 
 ```bash
-npm run build
 dsh plugin --profile desktop add link:/path/to/memora/packages/dsh-memory
 ```
 

@@ -30,9 +30,12 @@ async function bundleEntry(entryRel) {
   return Buffer.from(result.outputFiles[0].contents);
 }
 
-const [coreBundle, dreamBundle, contractBytes, dreamGuideBytes, licenseBytes] = await Promise.all([
+const dreamCliShim = Buffer.from(
+  '#!/usr/bin/env node\nimport { runDreamCLI } from "./index.js";\n\nprocess.exitCode = runDreamCLI();\n',
+);
+
+const [coreBundle, contractBytes, dreamGuideBytes, licenseBytes] = await Promise.all([
   bundleEntry("packages/core/src/index.js"),
-  bundleEntry("packages/core/src/dream-cli.js"),
   readFile(new URL("CONTRACT.md", repo)),
   readFile(new URL("DREAM.md", repo)),
   readFile(new URL("LICENSE", repo)),
@@ -41,7 +44,7 @@ const [coreBundle, dreamBundle, contractBytes, dreamGuideBytes, licenseBytes] = 
 const outputs = [];
 for (const adapter of adapters) {
   outputs.push([`packages/${adapter}/lib/core/index.js`, coreBundle]);
-  outputs.push([`packages/${adapter}/lib/core/dream-cli.js`, dreamBundle]);
+  outputs.push([`packages/${adapter}/lib/core/dream-cli.js`, dreamCliShim]);
   outputs.push([`packages/${adapter}/lib/core/CONTRACT.md`, contractBytes]);
   outputs.push([`packages/${adapter}/lib/core/DREAM.md`, dreamGuideBytes]);
   outputs.push([`packages/${adapter}/LICENSE`, licenseBytes]);

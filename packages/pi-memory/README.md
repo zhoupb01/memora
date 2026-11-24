@@ -5,6 +5,7 @@ Memora's native `pi` plugin for shared Markdown memory in `~/.agents/memory`.
 ## Install
 
 ```bash
+npm install && npm run build   # from the memora repo root
 pi install /path/to/memora/packages/pi-memory
 ```
 
