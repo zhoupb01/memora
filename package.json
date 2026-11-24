@@ -22,7 +22,7 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/build.mjs --check",
     "test": "npm run build && npm run check && TZ=UTC node --test test/*.test.mjs packages/dsh-memory/test/*.test.js",
-    "pack:adapters": "npm run build && npm pack --workspace pi-memory --workspace ./packages/dsh-memory --ignore-scripts"
+    "pack:adapters": "npm run build && npm pack --workspace pi-memory --workspace ./packages/dsh-memory --workspace agy-memory --ignore-scripts"
   },
   "dependencies": {
     "yaml": "^2.9.1"

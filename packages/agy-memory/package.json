@@ -4,5 +4,19 @@
   "private": true,
   "description": "Memora's native Antigravity plugin for shared Markdown memory.",
   "type": "module",
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "plugin.json",
+    "hooks.json",
+    "session-start.js",
+    "stop.js",
+    "assets/",
+    "skills/",
+    "lib/core/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "prepack": "node ../../scripts/build.mjs"
+  }
 }

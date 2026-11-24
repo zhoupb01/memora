@@ -6,7 +6,7 @@
 
 ## 安装
 
-从源码目录安装前，先在仓库根目录执行一次构建：
+可直接从 [GitHub Releases](https://github.com/zhoupb01/memora/releases) 下载对应插件的 `.tgz` 压缩包解压安装（无需本地构建）；若从源码仓库安装，先在根目录执行一次构建：
 
 ```bash
 npm install && npm run build

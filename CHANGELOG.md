@@ -4,9 +4,11 @@ Release notes for Memora. Native adapter and earlier pi-memory history are retai
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-24
+
 - Ship Memora v2 as three self-contained host plugins (`packages/pi-memory`, `packages/dsh-memory`, `packages/agy-memory`) sharing one bundled Node core, removing the global `memora` CLI, `AGENTS.md` edits, and Go/Bun runtime requirements.
-- Auto-initialize `~/.agents/memory/global/MEMORY.md` and rebuild `MEMORY.md` indexes automatically from note frontmatter on session start; cap injected indexes at 200 lines / 25 KB and keep `NOW.md` bodies out of startup context.
-- Remove all `git` dependencies: resolve project slugs directly from `.git` directories and worktree `commondir` files, and back up modified or deleted notes under `.dream/<digest>/backup/` during `/dream`.
+- Auto-initialize `~/.agents/memory/global/MEMORY.md` and rebuild `MEMORY.md` indexes automatically from note frontmatter on session start; cap injected indexes at 200 lines / 25 KB, cache startup prompts per session in `pi` and DSH, and keep `NOW.md` bodies out of startup context.
+- Remove all `git` dependencies: resolve project slugs directly from `.git` directories and worktree `commondir` files, and back up modified or deleted notes under `.dream/<digest>/backup/` during `/dream` (including on partial chunk failure).
 
 ## [0.4.0] - 2026-11-18
 
