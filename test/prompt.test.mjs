@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import { buildMemoryPrompt } from "../packages/core/src/index.js";
+import { buildMemoryPrompt, formatIndex } from "../packages/core/src/index.js";
 import { createFixture, put } from "./fixture.mjs";
 
 const note = (name, description, body, section) => `---
@@ -38,6 +38,16 @@ test("buildMemoryPrompt auto-initializes empty store, syncs notes, and excludes 
   assert.ok(readFileSync(join(f.root, "projects", "demo-repo", "MEMORY.md"), "utf8").includes("NOW.md"));
 });
 
+test("malformed NOW.md never exposes its body", (t) => {
+  const f = createFixture(t);
+  for (const body of ["Private task", "---\nname: [bad\n---\nPrivate task"]) {
+    put(join(f.root, "projects", "work", "NOW.md"), body);
+    const prompt = buildMemoryPrompt(f);
+    assert.match(prompt, /\[NOW\]\(NOW.md\)/);
+    assert.doesNotMatch(prompt, /Private task/);
+  }
+});
+
 test("buildMemoryPrompt enforces hard 200-line and 25 KB caps and handles non-project directories", (t) => {
   const f = createFixture(t);
   const repo = join(f.cwd, "cap-repo");
@@ -47,7 +57,8 @@ test("buildMemoryPrompt enforces hard 200-line and 25 KB caps and handles non-pr
     put(join(f.root, "projects", "cap-repo", `${String(i).padStart(3, "0")}.md`), note(`N${i}`, "short", "body"));
   }
   const lineCapped = buildMemoryPrompt({ root: f.root, cwd: repo, home: f.home });
-  assert.ok(lineCapped.includes("- [N200](200.md) — short"));
+  assert.ok(lineCapped.includes("- [N199](199.md) — short"));
+  assert.equal(formatIndex(join(f.root, "projects", "cap-repo")).split("\n").length, 200);
   assert.ok(!lineCapped.includes("- [N201](201.md) — short"));
   assert.ok(lineCapped.includes("(MEMORY.md exceeds 200 lines or 25 KB; run /dream to archive old notes.)"));
 
@@ -61,6 +72,15 @@ test("buildMemoryPrompt enforces hard 200-line and 25 KB caps and handles non-pr
   const byteCapped = buildMemoryPrompt({ root: f.root, cwd: byteRepo, home: f.home });
   assert.ok(byteCapped.includes("(MEMORY.md exceeds 200 lines or 25 KB; run /dream to archive old notes.)"));
   assert.ok(!byteCapped.includes("[B90](090.md)"));
+
+  const folder = join(f.root, "projects", "byte-repo");
+  assert.ok(Buffer.byteLength(formatIndex(folder)) <= 25_000);
+  put(join(folder, "MEMORY.md"), "中".repeat(9_000));
+  const clipped = formatIndex(folder);
+  assert.match(clipped, /^中+\n\(MEMORY.md exceeds/);
+  assert.ok(Buffer.byteLength(clipped) <= 25_000);
+  put(join(folder, "MEMORY.md"), "a".repeat(25_000));
+  assert.equal(formatIndex(folder), "a".repeat(25_000));
 
   // Outside any project repository
   const outside = buildMemoryPrompt({ root: f.root, cwd: f.cwd, home: f.home });

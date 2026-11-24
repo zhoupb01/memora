@@ -15,6 +15,7 @@ import {
   syncIndexes,
 } from "../packages/core/src/index.js";
 
+const usage = "Usage: node scripts/migrate-v2.mjs <memory-root>";
 const prefix = "-Users-zhoupb-Documents-";
 const projectSlugs = new Map([
   ["Pi", "Pi"],
@@ -78,10 +79,10 @@ function planMigration(root) {
     renamedFolders.push({ source, destination });
   }
 
-  function normalize(path, { name, description, section } = {}) {
+  function normalize(path, { name, description, section, destination = path }) {
     const { fields, body, issue } = readNote(path);
     if (!fields) {
-      untouched.push({ path: relative(root, path), issue });
+      untouched.push({ path: relative(root, path), destination, issue });
       return;
     }
     const clean = {
@@ -94,27 +95,24 @@ function planMigration(root) {
     writes.push({ path, contents: Buffer.concat([Buffer.from(`---\n${frontmatter}---\n`), body]) });
   }
 
-  function normalizeFolder(folder, globalNotes, destination) {
-    const { entries } = readIndex(join(folder, indexFile));
-    function normalizeNotes(directory) {
-      const local = directory === folder ? entries : readIndex(join(directory, indexFile)).entries;
+  function normalizeFolder(folder, globalNotes, destination = folder) {
+    for (const directory of [folder, join(folder, "archive")]) {
+      if (!lstatSync(directory, { throwIfNoEntry: false })?.isDirectory()) continue;
+      const { entries } = readIndex(join(directory, indexFile));
       for (const file of noteFiles(directory)) {
-        const entry = local.get(file);
+        const entry = entries.get(file);
         const name = directory === folder && file === openThreads ? "现在做到哪" : entry?.name;
         normalize(join(directory, file), {
           name,
           description: entry?.description,
           section: globalNotes ? entry?.section : undefined,
+          destination: join(destination, relative(folder, directory), file),
         });
       }
-      for (const child of folderEntries(directory)) {
-        if (child.isDirectory()) normalizeNotes(join(directory, child.name));
-      }
     }
-    normalizeNotes(folder);
     if (!globalNotes && lstatSync(join(folder, openThreads), { throwIfNoEntry: false })) {
-      requireFree(join(folder, nowFile), join(destination ?? folder, nowFile));
-      renamedNow.push({ source: join(destination ?? folder, openThreads), destination: join(destination ?? folder, nowFile) });
+      requireFree(join(folder, nowFile), join(destination, nowFile));
+      renamedNow.push({ source: join(destination, openThreads), destination: join(destination, nowFile) });
     }
   }
 
@@ -133,16 +131,17 @@ function planMigration(root) {
     }
     for (const target of targets) {
       const source = join(folder, target.file);
-      if (!lstatSync(source, { throwIfNoEntry: false })) {
-        throw new Error(`Missing catch-all note: ${source}`);
+      if (!lstatSync(source, { throwIfNoEntry: false })?.isFile()) {
+        throw new Error(`Expected a regular file for catch-all note: ${source}`);
       }
       const futureFolder = join(root, ...target.folder);
       const destination = join(futureFolder, target.file);
       const mapped = target.folder[0] === "projects" ? oldBySlug.get(target.folder[1]) : undefined;
+      if (target.folder[0] === "projects" && !mapped) throw new Error(`Missing project folder: ${target.folder[1]}`);
       const checkFolder = mapped ? join(mapped, ...target.folder.slice(2)) : futureFolder;
       requireFree(join(checkFolder, target.file), destination);
       const entry = entries.get(target.file);
-      normalize(source, { name: entry?.name, description: entry?.description, section: target.section });
+      normalize(source, { name: entry?.name, description: entry?.description, section: target.section, destination });
       rehomedNotes.push({ source, destination });
     }
     removedFolders.push(folder);
@@ -152,6 +151,7 @@ function planMigration(root) {
 }
 
 export function migrateV2(directory, { stdout = process.stdout, stderr = process.stderr } = {}) {
+  if (!directory?.trim()) throw new Error(usage);
   const root = resolveMemoryRoot(directory);
   const plan = planMigration(root);
   for (const { path, contents } of plan.writes) writeFileSync(path, contents);
@@ -165,8 +165,10 @@ export function migrateV2(directory, { stdout = process.stdout, stderr = process
     rmSync(join(folder, indexFile), { force: true });
     rmdirSync(folder);
   }
+  const untouchedFolders = new Set(plan.untouched.map(({ destination }) => dirname(destination)));
   for (const { destination } of plan.renamedFolders) {
-    rmSync(join(destination, "archive", indexFile), { force: true });
+    const archive = join(destination, "archive");
+    if (!untouchedFolders.has(archive)) rmSync(join(archive, indexFile), { force: true });
   }
   syncIndexes(root, { stdout, stderr });
   stdout.write(
@@ -182,8 +184,8 @@ export function migrateV2(directory, { stdout = process.stdout, stderr = process
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
-  if (args.length > 1) {
-    console.error("Usage: node scripts/migrate-v2.mjs [memory-root]");
+  if (args.length !== 1 || !args[0].trim()) {
+    console.error(usage);
     process.exit(1);
   }
   try {

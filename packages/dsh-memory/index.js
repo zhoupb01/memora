@@ -24,6 +24,7 @@ export const Config = Schema.object({
 
 export function apply(ctx, config) {
   const root = resolveMemoryRoot(config.directory);
+  const cache = new WeakMap();
   const eligible = (agent) => Boolean(
     agent && agent.session.header.origin !== "subagent" && ctx.agents.get(agent.id) === agent,
   );
@@ -32,9 +33,15 @@ export function apply(ctx, config) {
     name: "dsh-memory:memory",
     order: 10300,
     interpolate: false,
-    text: ({ agent }) => eligible(agent)
-      ? buildMemoryPrompt({ root, cwd: ctx.workingDirectory.get(agent.session) })
-      : "",
+    text: ({ agent }) => {
+      if (!eligible(agent)) return "";
+      const cwd = ctx.workingDirectory.get(agent.session);
+      const cached = cache.get(agent.session);
+      if (cached && cached.cwd === cwd) return cached.prompt;
+      const prompt = buildMemoryPrompt({ root, cwd });
+      cache.set(agent.session, { cwd, prompt });
+      return prompt;
+    },
   });
 
   ctx.commands.register({

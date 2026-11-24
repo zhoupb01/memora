@@ -25,27 +25,27 @@ export function formatIndex(folder) {
   if (!normalized) return "(empty)";
 
   const lines = normalized.split("\n");
+  if (lines.length <= maxIndexLines && Buffer.byteLength(normalized) <= maxIndexBytes) return normalized;
+
+  const budget = maxIndexBytes - Buffer.byteLength(overflowNotice) - 1;
   const kept = [];
   let bytes = 0;
-  let truncated = false;
   for (const line of lines) {
     const added = (kept.length ? 1 : 0) + Buffer.byteLength(line, "utf8");
-    if (kept.length >= maxIndexLines || bytes + added > maxIndexBytes) {
-      truncated = true;
-      break;
-    }
+    if (kept.length >= maxIndexLines - 1 || bytes + added > budget) break;
     kept.push(line);
     bytes += added;
   }
   if (!kept.length) {
     let slice = "";
     for (const ch of lines[0]) {
-      if (Buffer.byteLength(slice + ch, "utf8") > maxIndexBytes) break;
+      bytes += Buffer.byteLength(ch);
+      if (bytes > budget) break;
       slice += ch;
     }
-    return `${slice}\n${overflowNotice}`;
+    kept.push(slice);
   }
-  return truncated ? `${kept.join("\n")}\n${overflowNotice}` : kept.join("\n");
+  return [...kept, overflowNotice].join("\n");
 }
 
 export function renderContract(root) {

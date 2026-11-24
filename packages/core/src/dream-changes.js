@@ -47,7 +47,8 @@ export function trackDreamChanges(root, backupRoot) {
       if (before.has(relPath)) continue;
       const list = removedByHash.get(next.hash);
       if (list?.length) {
-        list.pop();
+        const sameName = list.findIndex((entry) => posix.basename(entry.relPath) === posix.basename(relPath));
+        list.splice(sameName < 0 ? 0 : sameName, 1);
         counts.moved++;
       } else {
         counts.added++;

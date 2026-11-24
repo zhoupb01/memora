@@ -14,7 +14,7 @@
     "directory": "packages/dsh-memory"
   },
   "engines": {
-    "node": ">=22.15.0",
+    "node": "^22.15.0 || >=23.8.0",
     "dsh": ">=0.2.2-rc.1 <0.3.0"
   },
   "exports": {

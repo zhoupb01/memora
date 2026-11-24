@@ -1,4 +1,4 @@
-import { closeSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 
 export function isProcessAlive(pid) {
   if (!Number.isSafeInteger(pid) || pid <= 0) return false;
@@ -25,22 +25,19 @@ export function withDreamLock(path, run) {
       if (readErr?.code !== "ENOENT") throw readErr;
     }
     const holder = Number(raw);
-    if (!raw) {
-      const age = Date.now() - (statSync(path, { throwIfNoEntry: false })?.mtimeMs ?? Date.now());
-      if (age < 5_000) throw new Error("Dream lock is held");
-    } else if (isProcessAlive(holder)) {
+    if (isProcessAlive(holder)) {
       throw new Error(`Dream lock is held by PID ${holder}`);
     }
     rmSync(path, { force: true });
     try {
       fd = openSync(path, "wx", 0o600);
     } catch (retryError) {
-      if (retryError?.code !== "EEXIST") throw retryError;
-      const winner = Number(readFileSync(path, "utf8").trim());
-      throw new Error(`Dream lock is held${winner ? ` by PID ${winner}` : ""}`);
+      if (retryError?.code === "EEXIST") throw new Error("Dream lock is held");
+      throw retryError;
     }
   }
 
+  const { dev, ino } = fstatSync(fd);
   try {
     writeFileSync(fd, `${process.pid}\n`);
     closeSync(fd);
@@ -48,6 +45,9 @@ export function withDreamLock(path, run) {
     return run();
   } finally {
     if (fd !== undefined) closeSync(fd);
-    rmSync(path, { force: true });
+    const cur = statSync(path, { throwIfNoEntry: false });
+    if (cur && cur.dev === dev && cur.ino === ino) {
+      rmSync(path, { force: true });
+    }
   }
 }

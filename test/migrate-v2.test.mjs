@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import { parse } from "yaml";
@@ -52,7 +53,10 @@ function snapshotTree(root) {
   function walk(dir) {
     for (const name of readdirSync(dir).sort()) {
       const full = join(dir, name);
-      if (statSync(full).isDirectory()) {
+      const stat = lstatSync(full);
+      if (stat.isSymbolicLink()) {
+        items.push(`${full}=LINK:${readlinkSync(full)}`);
+      } else if (stat.isDirectory()) {
         items.push(`${full}=DIR`);
         walk(full);
       } else {
@@ -77,11 +81,86 @@ test("migrate-v2 rewrites frontmatter, moves folders, preserves raw body bytes, 
   assert.deepEqual(legacy.fields, { name: "用户偏好", description: "从索引来", type: "feedback", section: "工作" });
   assert.deepEqual(legacy.body, rawBody);
 
+  assert.equal(readFileSync(join(f.root, "global/broken.md"), "utf8"), "---\nname: [broken\n---\n\nKeep unchanged\n");
+  assert.deepEqual(readMigrated(f.proj("memora", "archive/old.md")), {
+    fields: { name: "Original", description: "Original hook", type: "project" }, body: Buffer.from("\nBody\n"),
+  });
+  assert.deepEqual(readMigrated(f.proj("memora", "archive/indexed.md")).fields, {
+    name: "Archived", description: "archive hook", type: "project",
+  });
+  assert.deepEqual(readMigrated(f.proj("memora", "archive/memory-adapter-parity.md")).fields, {
+    name: "Parity", description: "old adapter note", type: "project",
+  });
+  assert.equal(existsSync(f.proj("memora", "archive/MEMORY.md")), false);
+  assert.equal(readFileSync(f.proj("memora", "MEMORY.md"), "utf8"), `- [现在做到哪](NOW.md) — next step
+- [Keep](keep.md) — from the index
+- [Original](memora-release-expectations.md) — Original hook
+`);
+  assert.equal(readFileSync(join(f.root, "global/MEMORY.md"), "utf8"), `## 工作
+- [用户偏好](legacy.md) — 从索引来
+
+## 工具
+- [Chat](chrome-mcp-native-config.md) — catch-all index hook
+- [Original](gpt-search-release-expectations.md) — Original hook
+
+## 生活
+- [Original](electric-bicycle-shopping.md) — Original hook
+
+## 未分类
+- [broken](broken.md) — Keep unchanged
+`);
+
   const now = readMigrated(f.proj("memora", "NOW.md"));
   assert.deepEqual(now.fields, { name: "现在做到哪", description: "next step", type: "project" });
   assert.equal(existsSync(f.proj("memora", "open-threads.md")), false);
   for (const old of [testMemora, testWorkspace, testProjects]) {
     assert.equal(existsSync(join(f.root, "projects", old)), false);
+  }
+});
+
+test("migration preserves templates and archive indexes needed by malformed notes", (t) => {
+  const f = setupLegacy(t);
+  const archiveIndex = readFileSync(f.proj(testMemora, "archive/MEMORY.md"));
+  put(f.proj(testMemora, "archive/indexed.md"), "Missing header");
+  put(f.proj(testMemora, "templates/sample.md"), testNote);
+  migrateV2(f.root, { stdout: createStream(), stderr: createStream() });
+  assert.equal(readFileSync(f.proj("memora", "templates/sample.md"), "utf8"), testNote);
+  assert.equal(readFileSync(f.proj("memora", "archive/indexed.md"), "utf8"), "Missing header");
+  assert.deepEqual(readFileSync(f.proj("memora", "archive/MEMORY.md")), archiveIndex);
+});
+
+test("migration rejects omitted, blank and extra arguments before using a default root", (t) => {
+  const f = setupLegacy(t);
+  const before = snapshotTree(f.root);
+  for (const args of [[], ["  "], [f.root, "extra"]]) {
+    const result = spawnSync(process.execPath, ["scripts/migrate-v2.mjs", ...args], {
+      encoding: "utf8", env: { ...process.env, HOME: f.home, MEMORA_DIR: f.root },
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr.trim(), "Usage: node scripts/migrate-v2.mjs <memory-root>");
+    assert.deepEqual(snapshotTree(f.root), before);
+  }
+  // Isolate the API's default-root lookup too, even if its argument check regresses.
+  const api = spawnSync(process.execPath, ["--input-type=module", "-e",
+    'import assert from "node:assert/strict"; import { migrateV2 } from "./scripts/migrate-v2.mjs"; for (const path of [undefined, "  "]) assert.throws(() => migrateV2(path), /memory-root/);',
+  ], { env: { ...process.env, HOME: f.home, MEMORA_DIR: f.root }, encoding: "utf8" });
+  assert.equal(api.status, 0, api.stderr);
+  assert.deepEqual(snapshotTree(f.root), before);
+});
+
+test("catch-all symlinks and missing project destinations fail before any write", (t) => {
+  for (const kind of ["symlink", "missing project"]) {
+    const f = setupLegacy(t);
+    if (kind === "symlink") {
+      const path = f.proj(testWorkspace, "chrome-mcp-native-config.md");
+      rmSync(path);
+      symlinkSync(join(f.root, "global/legacy.md"), path);
+    } else {
+      rmSync(f.proj(testMemora, ""), { recursive: true });
+    }
+    const before = snapshotTree(f.root);
+    assert.throws(() => migrateV2(f.root), kind === "symlink" ? /regular file/ : /Missing project/);
+    assert.deepEqual(snapshotTree(f.root), before);
   }
 });
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, statSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -43,38 +43,48 @@ test("pi, DSH, and agy adapters produce identical startup memory prompts and aut
   });
 
   // 1. pi-memory
-  const listeners = [];
-  installPi({ on: (name, fn) => listeners.push({ name, fn }) });
-  assert.equal(listeners.length, 1);
-  assert.equal(listeners[0].name, "before_agent_start");
+  const listeners = new Map();
+  installPi({ on: (name, fn) => listeners.set(name, fn) });
+  const piStart = listeners.get("before_agent_start");
   const piEvent = { systemPromptOptions: { sections: { keep: "ok" } } };
-  listeners[0].fn(piEvent, { hasUI: true, cwd: repo });
+  piStart(piEvent, { hasUI: true, cwd: repo });
   const piPrompt = piEvent.systemPromptOptions.sections.memory;
   assert.equal(piEvent.systemPromptOptions.sections.keep, "ok");
 
   // Non-UI headless pi calls (e.g. dream runner) do not inject memory
   const headlessEvent = { systemPromptOptions: { sections: {} } };
-  listeners[0].fn(headlessEvent, { hasUI: false, cwd: repo });
+  piStart(headlessEvent, { hasUI: false, cwd: repo });
   assert.equal(headlessEvent.systemPromptOptions.sections.memory, undefined);
+
+  const clearIndexes = () => {
+    rmSync(join(f.root, "projects/shared-app/MEMORY.md"));
+    rmSync(join(f.root, "global/MEMORY.md"));
+  };
+  clearIndexes();
 
   // 2. dsh-memory
   const agent = { id: "main", session: { header: {} } };
   const sections = [];
   let dshCommand;
+  const agents = new Map([[agent.id, agent]]);
+  let dshCwd = repo;
   installDsh({
-    agents: new Map([[agent.id, agent]]),
-    workingDirectory: { get: () => repo },
+    agents,
+    workingDirectory: { get: () => dshCwd },
     systemPrompt: { section: (s) => sections.push(s) },
     commands: { register: (c) => { dshCommand = c; } },
   }, Config({}));
-  const dshPrompt = sections.find((s) => s.name === "dsh-memory:memory")?.text({ agent });
+  const dshText = sections.find((s) => s.name === "dsh-memory:memory").text;
+  const dshPrompt = dshText({ agent });
+  clearIndexes();
 
   // 3. agy-memory (execute real session-start.js and stop.js hooks via node)
-  const agyStart = spawnSync("node", ["./session-start.js"], {
-    cwd: agyDir,
-    input: JSON.stringify({ cwd: repo, workspacePaths: [repo], hookEventName: "SessionStart" }),
+  const hookEnv = { ...process.env, HOME: f.home, MEMORA_DIR: f.root };
+  const agyStart = spawnSync("node", [join(agyDir, "session-start.js")], {
+    cwd: f.cwd,
+    input: JSON.stringify({ workspacePaths: [repo], hookEventName: "SessionStart" }),
     encoding: "utf8",
-    env: { ...process.env, HOME: f.home, MEMORA_DIR: f.root },
+    env: hookEnv,
   });
   assert.equal(agyStart.status, 0, agyStart.stderr);
   const agyPayload = JSON.parse(agyStart.stdout);
@@ -89,25 +99,51 @@ test("pi, DSH, and agy adapters produce identical startup memory prompts and aut
 
   // Verify agy Stop hook syncs newly written notes and returns {"decision":"allow"}
   put(join(f.root, "projects", "shared-app", "added.md"), "---\nname: Added\ndescription: Synced on stop\ntype: project\n---\nBody\n");
-  const agyStop = spawnSync("node", ["./stop.js"], {
-    cwd: agyDir,
+  const agyStop = spawnSync("node", [join(agyDir, "stop.js")], {
+    cwd: f.cwd,
     input: JSON.stringify({ cwd: repo, hookEventName: "Stop", terminationReason: "NO_TOOL_CALL" }),
     encoding: "utf8",
-    env: { ...process.env, HOME: f.home, MEMORA_DIR: f.root },
+    env: hookEnv,
   });
   assert.equal(agyStop.status, 0, agyStop.stderr);
   assert.deepEqual(JSON.parse(agyStop.stdout), { decision: "allow" });
   assert.ok(readFileSync(join(f.root, "projects", "shared-app", "MEMORY.md"), "utf8").includes("[Added](added.md)"));
 
+  // Reassembling a prompt uses its session snapshot. A new session or cwd refreshes it.
+  const piText = (ctx) => {
+    piStart(piEvent, { hasUI: true, cwd: repo, ...ctx });
+    return piEvent.systemPromptOptions.sections.memory;
+  };
+  assert.equal(piText({}), piPrompt);
+  assert.equal(dshText({ agent }), dshPrompt);
+  const second = { id: "second", session: { header: {} } };
+  agents.set(second.id, second);
+  assert.match(dshText({ agent: second }), /Synced on stop/);
+  assert.equal(dshText({ agent }), dshPrompt);
+  dshCwd = f.cwd;
+  assert.doesNotMatch(dshText({ agent }), /Ship plugins/);
+  dshCwd = repo;
+  assert.match(dshText({ agent }), /Synced on stop/);
+  listeners.get("session_start")();
+  assert.match(piText({}), /Synced on stop/);
+  put(join(f.root, "global", "fresh.md"), "Fresh session note");
+  const sessionManager = { getSessionId: () => "second" };
+  assert.match(piText({ sessionManager }), /Fresh session note/);
+  assert.doesNotMatch(piText({ sessionManager, cwd: f.cwd }), /Ship plugins/);
+
   // Verify DSH /dream command accepts valid flags and rejects subagents/bad args
   const received = [];
   agent.followup = (msg) => received.push(msg);
+  const subagent = { id: "sub", session: { header: { origin: "subagent" } } };
+  agents.set(subagent.id, subagent);
+  assert.equal(dshText({ agent: subagent }), "");
+  assert.equal(dshCommand.handler({ agent: subagent, rawInput: "", signal: new AbortController().signal }).kind, "error");
   const okEmpty = dshCommand.handler({ agent, rawInput: "", attachments: [], signal: new AbortController().signal });
   const okFlags = dshCommand.handler({ agent, rawInput: "--dry-run --since 2026-11-20 --model test/m", attachments: [], signal: new AbortController().signal });
   assert.deepEqual(okEmpty, { kind: "success" });
   assert.deepEqual(okFlags, { kind: "success" });
   assert.equal(received.length, 2);
-  assert.match(received[1].content[0].text, /dream-cli\.js.*"--dry-run"|--dry-run.*--since "2026-11-20" --model "test\/m"/);
+  assert.match(received[1].content[0].text, /dream-cli\.js.*--dry-run --since '2026-11-20' --model 'test\/m'/);
 
   const badArg = dshCommand.handler({ agent, rawInput: "unexpected", attachments: [], signal: new AbortController().signal });
   assert.equal(badArg.kind, "error");

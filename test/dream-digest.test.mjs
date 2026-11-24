@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { zstdCompressSync } from "node:zlib";
 import test from "node:test";
-import { dream } from "../packages/core/src/index.js";
+import { buildDreamFollowup, dream } from "../packages/core/src/index.js";
 import { createFixture, createStream, put } from "./fixture.mjs";
 
 const stamp = "2026-11-17T12:00:00";
@@ -35,7 +35,7 @@ test("dream extracts visible conversation across pi, DSH (.zstd), and Claude Cod
   const piPath = transcript(f, ".pi/agent/sessions/test/main.jsonl", [
     header,
     piMsg("user", [text("Too early")], "2026-11-16T23:59:59"),
-    piMsg("user", [text("Pi user  stays"), { type: "image", data: "Hidden image" }]),
+    piMsg("user", [text("Pi user <system-reminder>Hidden\ntext</system-reminder> stays"), { type: "image", data: "Hidden image" }]),
     piMsg("toolResult", [text("Hidden result")]),
     piMsg("assistant", [text("Pi answer\n\n## Heading\n\nStill the Pi answer"), { type: "thinking", text: "Hidden thinking" }, { type: "toolCall", text: "Hidden tool call" }]),
     piMsg("user", "Pi string message"),
@@ -51,6 +51,8 @@ test("dream extracts visible conversation across pi, DSH (.zstd), and Claude Cod
     { type: "system/message", time, data: { content: [text("Hidden system")] } },
     { type: "user/message", time, data: { source: { kind: "agent-instructions" }, content: [text("Hidden injected instructions")] } },
     { type: "user/message", time, data: { source: { kind: "user" }, content: [text("DSH user")] } },
+    { type: "user/message", time, data: { source: { kind: "user" }, content: [text(buildDreamFollowup({ script: "Hidden", root: f.root }))] } },
+    { type: "user/message", time, data: { source: { kind: "user" }, content: [text("Run `node --version` too")] } },
     { type: "assistant/message", time, data: { message: { content: [text("DSH answer"), { type: "tool-call", text: "Hidden DSH call" }] } } },
   ];
   transcript(f, ".dsh/sessions/test/main/session.v4.jsonl.zstd", dshRows);
@@ -80,7 +82,9 @@ test("dream extracts visible conversation across pi, DSH (.zstd), and Claude Cod
   assert.ok(digest.startsWith('Sessions start with a line "=== session: host | start | cwd | project ===".\n\n'));
   const headers = digest.match(/^=== session:.* ===$/gm);
   assert.equal(headers.length, 3);
-  assert.match(headers[0], /pi \| .* \| \/example\/CaseRepo \| CaseRepo/);
+  assert.equal(headers[0], "=== session: pi | 2026-11-17 12:00:00 | /example/CaseRepo | CaseRepo ===");
+  assert.ok(digest.includes("**Assistant:**\n\nPi answer\n\n## Heading\n\nStill the Pi answer\n\n**User:**\n\nPi string message"));
+  assert.ok(digest.includes("Run `node --version` too"));
   assert.match(headers[1], /DeepSeek Harness/);
   assert.match(headers[2], /Claude Code/);
   for (const msg of ["Pi user  stays", "Pi answer", "Pi string message", "DSH user", "DSH answer", "Claude user", "Claude parts", "Claude answer"]) {
@@ -90,6 +94,17 @@ test("dream extracts visible conversation across pi, DSH (.zstd), and Claude Cod
   assert.ok(digest.includes("[truncated]"));
   assert.deepEqual(readFileSync(piPath), before);
   assert.equal(existsSync(join(f.root, ".dream", "cursor.json")), false);
+});
+
+test("dream follows symlinks in literal, wildcard directory and transcript paths", (t) => {
+  const f = createFixture(t);
+  const file = transcript(f, "data/rows", [header, piMsg("user", "Linked turn")]);
+  const sessions = join(f.home, "storage/agent/sessions");
+  mkdirSync(sessions, { recursive: true });
+  symlinkSync(join(f.home, "storage"), join(f.home, ".pi"));
+  symlinkSync(join(f.home, "data"), join(sessions, "linked"));
+  symlinkSync(file, join(f.home, "data/main.jsonl"));
+  assert.match(dryRun(f, "2026-11-17").chunks.join(""), /Linked turn/);
 });
 
 test("dream keeps small sessions together and splits oversized sessions between turns", (t) => {
@@ -104,6 +119,11 @@ test("dream keeps small sessions together and splits oversized sessions between 
   const { chunks, out } = dryRun(f, "2026-11-17");
   assert.equal(chunks.length, 4);
   assert.deepEqual(chunks.map((c) => c.match(/\*\*User:\*\*/g)?.length), [100, 100, 150, 10]);
+  assert.deepEqual(chunks.map((chunk) => chunk.split("\n").slice(0, 3)),
+    [12, 13, 14, 14].map((hour) => [
+      'Sessions start with a line "=== session: host | start | cwd | project ===".', "",
+      `=== session: pi | 2026-11-17 ${hour}:00:00 | ${cwd} | global ===`,
+    ]));
   assert.ok(chunks.every((c) => c.length <= 300_000));
   assert.ok(out.includes(`${chunks.reduce((sum, c) => sum + c.length, 0)} characters, 4 chunks`));
 });

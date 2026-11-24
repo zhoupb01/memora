@@ -138,6 +138,14 @@ test("missing and invalid frontmatter use first body line; long hooks warn witho
   );
 });
 
+test("emptying a project clears its existing index", (t) => {
+  const f = createFixture(t);
+  const index = put(join(f.root, "projects", "old", "MEMORY.md"), "- [Archived](old.md) — history\n");
+  assert.equal(runSync(f.root).out, "Indexes: 2 written, 0 unchanged; 0 warnings\n");
+  assert.equal(readFileSync(index, "utf8"), "");
+  assert.equal(runSync(f.root).out, "Indexes: 0 written, 2 unchanged; 0 warnings\n");
+});
+
 for (const [globalCount, projectCount] of [[199, 201], [200, 200], [200, 201]]) {
   test(`index size warnings apply independently (${globalCount + 1} global, ${projectCount} project lines)`, (t) => {
     const f = createFixture(t);

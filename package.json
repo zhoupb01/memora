@@ -10,7 +10,7 @@
     "url": "git+https://github.com/zhoupb01/memora.git"
   },
   "engines": {
-    "node": ">=22.15.0"
+    "node": "^22.15.0 || >=23.8.0"
   },
   "workspaces": [
     "packages/core",

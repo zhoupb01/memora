@@ -88,7 +88,7 @@ section: 工作方式
 
 ## 从 v1 迁移
 
-先备份旧记忆并在副本上试跑 `node scripts/migrate-v2.mjs <memory-root>`，核对无误后再对真实目录执行。
+先备份 v1 记忆目录，在副本上运行 `node scripts/migrate-v2.mjs <memory-root>`，核对无误后再迁移真实目录，最后启用 v2 插件。
 
 开发与验证：
 

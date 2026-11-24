@@ -1,6 +1,8 @@
-import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { zstdDecompressSync } from "node:zlib";
+
+export const dreamFollowupEnding = "Do not edit memory files directly unless the user asks after reviewing the report.";
 
 const sources = {
   pi: [".pi", "agent", "sessions", "*", "*.jsonl"],
@@ -55,7 +57,7 @@ function scanPattern(home, segments) {
     for (const dir of current) {
       if (!hasWildcard) {
         const candidate = join(dir, seg);
-        const info = lstatSync(candidate, { throwIfNoEntry: false });
+        const info = statSync(candidate, { throwIfNoEntry: false });
         if (!info) continue;
         if (last ? info.isFile() : info.isDirectory()) next.push(candidate);
         continue;
@@ -63,13 +65,15 @@ function scanPattern(home, segments) {
       let entries;
       try {
         entries = readdirSync(dir, { withFileTypes: true });
-      } catch {
+      } catch (error) {
+        if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") throw error;
         continue;
       }
       for (const entry of entries) {
         if (!matchSegment(seg, entry.name)) continue;
         const candidate = join(dir, entry.name);
-        if (last ? entry.isFile() : entry.isDirectory()) next.push(candidate);
+        const info = entry.isSymbolicLink() ? statSync(candidate, { throwIfNoEntry: false }) : entry;
+        if (last ? info?.isFile() : info?.isDirectory()) next.push(candidate);
       }
     }
     current = next;
@@ -115,6 +119,7 @@ function inspectTranscript(host, path, after, since) {
       ? visible.replace(/<system-reminder\b[^>]*>[\s\S]*?<\/system-reminder>/g, "")
       : visible).trim();
     if (!text) continue;
+    if (host === "DeepSeek Harness" && role === "user" && text.startsWith("Run `node ") && text.endsWith(dreamFollowupEnding)) continue;
     if (role === "user" && firstUser) {
       firstUser = false;
       if (text.startsWith("<file name=")) {
@@ -147,8 +152,12 @@ export function collectTranscripts(home, previous, since) {
         cursor[path] = last;
         continue;
       }
-      const after = since === undefined && !previous ? Infinity : (last?.records ?? 0);
-      const { records, session } = inspectTranscript(host, path, after, since);
+      const after = last && size < last.size ? 0 : (last?.records ?? 0);
+      const baseline = since === undefined && !previous;
+      let { records, session } = inspectTranscript(host, path, baseline ? Infinity : after, since);
+      if (since === undefined && records < after) {
+        ({ records, session } = inspectTranscript(host, path, 0, since));
+      }
       cursor[path] = { size, mtime, records };
       if (session) {
         totals[host]++;

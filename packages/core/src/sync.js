@@ -30,9 +30,9 @@ export function syncIndexes(root, { quiet = false, stdout = process.stdout, stde
 
   function syncFolder(folder, global) {
     const files = noteFiles(folder);
-    if (!global && files.length === 0) return;
     const index = join(folder, indexFile);
     const previous = readIndex(index);
+    if (!global && !files.length && previous.content === undefined) return;
     const sections = previous.sections;
     const notes = new Map(files.map((file) => {
       const path = join(folder, file);
@@ -49,7 +49,7 @@ export function syncIndexes(root, { quiet = false, stdout = process.stdout, stde
       }
       const missing = [!oneLine(name) && "name", !oneLine(description) && "description", !validType && "type"].filter(Boolean);
       warn(path, issue ?? `missing or invalid frontmatter: ${missing.join(", ")}`);
-      const firstLine = body.toString("utf8").split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? "";
+      const firstLine = file === nowFile ? "" : body.toString("utf8").split(/\r?\n/).map((line) => line.trim()).find(Boolean) ?? "";
       const fallback = [...firstLine].slice(0, maxDescription).join("");
       return [file, { line: `- [${basename(file, ".md")}](${file}) — ${fallback}`, group }];
     }));

@@ -8,7 +8,7 @@ import { folderEntries } from "./index-file.js";
 import { readResource, renderContract } from "./prompt.js";
 import { resolveMemoryRoot, userHome } from "./root.js";
 import { syncIndexes, writeAtomic } from "./sync.js";
-import { collectTranscripts } from "./transcripts.js";
+import { collectTranscripts, dreamFollowupEnding } from "./transcripts.js";
 
 export const defaultDreamModel = "sub2api/gpt-6.2-sol";
 export const dreamCommandDescription = "Dream — curate shared memory from pi, DeepSeek Harness, and Claude Code transcripts";
@@ -46,7 +46,7 @@ export function parseDreamArgs(args, { allowRoot = true, usage = dreamCliUsage }
       throw new Error(usage);
     }
     const value = inline !== undefined ? inline : args[++i];
-    if (value === undefined || value.trim() === "") {
+    if (value === undefined || value.trim() === "" || (inline === undefined && value.startsWith("-"))) {
       throw new Error(usage);
     }
     options[name] = value;
@@ -105,8 +105,9 @@ export function parseDreamCommandInput(rawInput = "") {
 }
 
 export function buildDreamFollowup({ script, root, args = [] }) {
-  const argv = ["node", JSON.stringify(script), "--root", JSON.stringify(root), ...args.map((a) => (/^--?[a-z-]+$/.test(a) ? a : JSON.stringify(a)))];
-  return `Run \`${argv.join(" ")}\` with bash and report its output clearly. Do not edit memory files directly unless the user asks after reviewing the report.`;
+  const quote = (arg) => "'" + arg.replaceAll("'", "'\\''") + "'";
+  const argv = ["node", quote(script), "--root", quote(root), ...args.map((arg) => /^--?[a-z-]+$/.test(arg) ? arg : quote(arg))];
+  return `Run \`${argv.join(" ")}\` with bash and report its output clearly. ${dreamFollowupEnding}`;
 }
 
 function runPi({ root, model, prompt }) {
@@ -155,6 +156,7 @@ export function dream(
     stdout.write(`Digest: ${digest.path}\n`);
     if (dryRun) return;
 
+    let changes;
     try {
       if (!count) {
         syncIndexes(root, { stdout, stderr });
@@ -172,25 +174,31 @@ export function dream(
       const today = localDate(new Date());
       const reports = [];
 
-      for (const [i, chunk] of digest.chunks.entries()) {
-        const projects = folderEntries(join(root, "projects"))
-          .filter((entry) => entry.isDirectory())
-          .map(({ name }) => name);
-        const prompt = `${guide}\nMemory root: ${root}\nDate: ${today}\nProject folders: ${JSON.stringify(projects)}\n` +
-          `Projects in this chunk: ${JSON.stringify(chunk.projects)}\nChunk: ${chunk.file}\n\n${contract}`;
-        try {
-          const report = runner({ root, model, prompt }).trim();
-          if (!report) throw new Error("pi returned no report");
-          const file = basename(chunk.file).replace(/^chunk-/, "report-");
-          writeFileSync(join(digest.path, file), `${report}\n`, { mode: 0o600 });
-          reports.push(report);
-        } catch (error) {
-          throw new Error(`Dream chunk ${i + 1}/${count} failed: ${error instanceof Error ? error.message : error}`);
+      try {
+        syncIndexes(root, { quiet: true });
+        for (const [i, chunk] of digest.chunks.entries()) {
+          const projects = folderEntries(join(root, "projects"))
+            .filter((entry) => entry.isDirectory())
+            .map(({ name }) => name);
+          const prompt = `${guide}\nMemory root: ${root}\nDate: ${today}\nProject folders: ${JSON.stringify(projects)}\n` +
+            `Projects in this chunk: ${JSON.stringify(chunk.projects)}\nChunk: ${chunk.file}\n\n${contract}`;
+          try {
+            const report = runner({ root, model, prompt }).trim();
+            if (!report) throw new Error("pi returned no report");
+            const file = basename(chunk.file).replace(/^chunk-/, "report-");
+            writeFileSync(join(digest.path, file), `${report}\n`, { mode: 0o600 });
+            reports.push(report);
+            syncIndexes(root, { quiet: true });
+          } catch (error) {
+            throw new Error(`Dream chunk ${i + 1}/${count} failed: ${error instanceof Error ? error.message : error}`);
+          }
         }
-      }
 
-      syncIndexes(root, { stdout, stderr });
-      const { counts, backupPath } = finish();
+        syncIndexes(root, { stdout, stderr });
+      } finally {
+        changes = finish();
+      }
+      const { counts, backupPath } = changes;
       saveCursor(cursorPath, cursor);
       stdout.write(`Chunks run: ${reports.length}\n`);
       stdout.write(`Notes: ${counts.added} added, ${counts.changed} changed, ${counts.moved} moved, ${counts.deleted} deleted\n`);
@@ -199,7 +207,8 @@ export function dream(
       }
       stdout.write(`${reports.join("\n\n")}\n`);
     } catch (error) {
-      throw new Error(`${error instanceof Error ? error.message : error}\nDigest: ${digest.path}`);
+      const backups = changes?.backupPath ? `\nBackups: ${changes.backupPath}` : "";
+      throw new Error(`${error instanceof Error ? error.message : error}\nDigest: ${digest.path}${backups}`);
     }
   });
 }
